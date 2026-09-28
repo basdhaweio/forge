@@ -2,6 +2,8 @@
 
 A gamified training, rehab and nutrition tracker. It plans each day around injuries and travel, logs everything that counts as exercise (PT included), and turns consistency into XP, levels, streaks, quests and records.
 
+**Live:** https://basdhaweio.github.io/forge/
+
 Same stack as Canto: a static PWA, vanilla JS with no build step, installable on a phone, and working offline. Your data stays in the browser, with backup and restore available.
 
 ## What it does
