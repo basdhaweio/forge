@@ -61,7 +61,7 @@
       const name = h('input', { type: 'text', placeholder: 'What should Forge call you?', value: st.profile.name || '' });
       name.addEventListener('input', () => { st.profile.name = name.value.trim(); save(); });
       wrap.append(h('div', { class: 'hero' }, h('div', { style: { fontSize: '3rem' }, text: '⚒️' }), h('h1', { text: 'Welcome to Forge' }),
-        h('p', { class: 'muted', text: 'Daily PT, holds and mobility; weekly lifting, Krav, 4×4s, yoga and Murph prep; protein, sugar and a weekly fast — planned around your injuries, adapted for travel, and turned into a game where the numbers only go up.' })),
+        h('p', { class: 'muted', text: 'Daily PT, holds and mobility; weekly lifting, Krav, 4×4s, yoga and Murph prep; protein, treats and a weekly fast — planned around your injuries, adapted for travel, and turned into a game where the numbers only go up.' })),
         h('div', { class: 'card mt' }, h('label', { class: 'field' }, h('span', { text: 'Name (optional)' }), name),
           h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Units' }), seg([{ v: 'imperial', label: 'lb · in · mi' }, { v: 'metric', label: 'kg · cm · km' }], st.profile.units, (v) => { st.profile.units = v; save(); }))),
         h('p', { class: 'tiny muted mt', text: 'Everything you enter stays in this browser on this device. Nothing is sent anywhere. Back it up from Settings.' }),
@@ -97,14 +97,14 @@
         nav(() => go(6)));
     } else {
       const n = st.settings.nutrition;
-      wrap.append(h('h1', { text: 'Fuel targets' }), h('p', { class: 'muted mb', text: 'Protein builds the muscle; sugar runs on a weekly budget so baking days balance out; one fast a week.' }),
+      wrap.append(h('h1', { text: 'Fuel targets' }), h('p', { class: 'muted mb', text: 'Protein builds the muscle; treats run on a weekly budget so baking days balance out; one fast a week.' }),
         h('div', { class: 'card' },
           h('div', { class: 'fieldrow' },
             numField('Protein target (g/day)', n.protein, (v) => { n.protein = v; save(); }, { placeholder: String(F.game.proteinTarget()) + ' (auto)', step: 5 }),
-            numField('Added sugar (g/day pace)', n.sugarDaily, (v) => { n.sugarDaily = v || 36; save(); }, { step: 1 })),
+            numField('Treats per week', n.treatsWeek, (v) => { n.treatsWeek = v === null ? 5 : Math.max(0, v); save(); }, { step: 0.5 })),
           h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Weekly fast day' }), h('select', { onChange: (e) => { st.settings.fast.day = +e.target.value; save(); } }, F.ui.DAYS.map((d, i) => h('option', { value: i, selected: st.settings.fast.day === i, text: d })))),
           h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Fast length' }), seg([{ v: 24, label: '24 h' }, { v: 36, label: '36 h' }], st.settings.fast.targetH, (v) => { st.settings.fast.targetH = v; save(); }))),
-        h('p', { class: 'small muted mt', text: 'Auto protein is 0.8 g per lb of bodyweight — a solid target for building muscle while leaning out. The sugar pace defaults to the American Heart Association’s 36 g/day for men, budgeted weekly (252 g).' }),
+        h('p', { class: 'small muted mt', text: 'Auto protein is 0.8 g per lb of bodyweight — a solid target for building muscle while leaning out. A treat is a cookie, brownie, muffin or soda; small ones count half, a slice of cake or a big bakery cookie counts double. Fruit and milk don’t count. No weighing, no sugar grams.' }),
         h('div', { class: 'tiny muted mt-s', text: F.data.prog().fastingCaution }),
         nav(() => { st.profile.onboarded = true; if (!st.equipment) st.equipment = JSON.parse(JSON.stringify(P.kits)); F.store.saveNow(); location.hash = '#/'; setTimeout(() => F.ui.celebrate({ icon: '⚒️', eyebrow: 'Character created', title: 'Level 1 · Recruit', sub: 'Check in, knock out your PT, and the numbers start going up.' }), 300); }, 'Start training'));
     }
@@ -184,7 +184,7 @@
     wrap.append(sec('nutrition', 'Nutrition & fasting',
       h('div', { class: 'fieldrow' },
         numField('Protein (g/day)', n.protein, (v) => { n.protein = v; save(); }, { placeholder: F.game.proteinTarget() + ' auto', step: 5 }),
-        numField('Added sugar pace (g/day)', n.sugarDaily, (v) => { n.sugarDaily = v || 36; save(); }, { step: 1 }),
+        numField('Treats per week', n.treatsWeek, (v) => { n.treatsWeek = v === null ? 5 : Math.max(0, v); save(); }, { step: 0.5 }),
         numField('Calorie target (optional)', n.kcal, (v) => { n.kcal = v; save(); }, { step: 50, placeholder: F.game.suggestKcal() ? F.game.suggestKcal() + ' suggested' : 'kcal' })),
       h('label', { class: 'toggle' }, tk, 'Show calories'),
       h('p', { class: 'tiny muted', text: 'Suggested calories = estimated maintenance minus 300 — a gentle deficit that trims the waist while you build. Protein matters more than hitting a calorie number exactly.' }),

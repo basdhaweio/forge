@@ -18,7 +18,15 @@ F.game = (() => {
   function age() { const y = F.store.load().profile.birthYear; return y ? new Date().getFullYear() - y : null; }
   function hrMax() { const S = F.store.load(); if (S.profile.hrMax) return S.profile.hrMax; const a = age(); return a ? Math.round(208 - 0.7 * a) : null; }
   function proteinTarget() { const S = F.store.load(); return S.settings.nutrition.protein || Math.round((weightLb() * 0.8) / 5) * 5; }
-  function sugarDaily() { return F.store.load().settings.nutrition.sugarDaily || 36; }
+  // Treats are counted, not weighed: small ½, regular 1, big 2. Older logs carried sugar grams; map those to a size.
+  function treatBudget() { const n = F.store.load().settings.nutrition; return n.treatsWeek ?? 5; }
+  function tpOf(it) {
+    if (!it) return 0;
+    if (it.tp !== undefined && it.tp !== null) return +it.tp || 0;
+    const g = +it.sug || 0;
+    if (!it.treat && g < 10) return 0;
+    return g < 10 ? 0.5 : g < 25 ? 1 : 2;
+  }
   function bmr() {
     const S = F.store.load(), p = S.profile, a = age();
     if (!p.heightIn || !a || !p.sex) return null;
@@ -121,7 +129,7 @@ F.game = (() => {
     const travelDays = dates.filter((d) => F.store.isTravel(d)).length;
     const homeFrac = (7 - travelDays) / 7;
     const sess = S.sessions.filter((x) => x.date >= ws && x.date <= end);
-    const proteinT = proteinTarget(), budget = sugarDaily() * 7;
+    const proteinT = proteinTarget(), budget = treatBudget();
     const elapsed = dates.filter((d) => d <= today).length;
     const list = [];
     for (const q of P.quotas) {
@@ -138,7 +146,7 @@ F.game = (() => {
       // a fast belongs to the week it started in, so a Saturday-night-to-Monday 36 h fast still counts
       else if (q.kind === 'fast') done = S.fasts.filter((f) => { const b = F.ui.ymd(new Date(f.start)); return b >= ws && b <= end && f.end - f.start >= 24 * 3.6e6; }).length;
       else if (q.kind === 'sugar') {
-        const used = dates.reduce((a, d) => a + ((days[d] && days[d].sugar) || 0), 0);
+        const used = dates.reduce((a, d) => a + ((days[d] && days[d].treats) || 0), 0);
         const foodDays = dates.filter((d) => days[d] && days[d].foodN > 0).length;
         const enough = foodDays >= Math.min(4, Math.max(1, elapsed));
         extra = { used, budget, foodDays };
@@ -160,7 +168,7 @@ F.game = (() => {
     const src = { sessions: 0, tasks: 0, weeks: 0, fasts: 0, measures: 0, ach: 0, quests: 0 };
     let total = 0;
     const days = {};
-    const D = (d) => days[d] || (days[d] = { xp: 0, active: false, min: 0, kcal: 0, tags: new Set(), holdSec: 0, walkMin: 0, protein: 0, sugar: 0, kcalIn: 0, foodN: 0, sessions: 0 });
+    const D = (d) => days[d] || (days[d] = { xp: 0, active: false, min: 0, kcal: 0, tags: new Set(), holdSec: 0, walkMin: 0, protein: 0, treats: 0, kcalIn: 0, foodN: 0, sessions: 0 });
     const give = (d, xp, stat, kind) => {
       if (!xp) return;
       total += xp; src[kind] += xp;
@@ -226,7 +234,7 @@ F.game = (() => {
 
     for (const [date, items] of Object.entries(S.food)) {
       const d = D(date);
-      for (const it of items) { d.protein += +it.p || 0; d.sugar += +it.sug || 0; d.kcalIn += +it.kcal || 0; d.foodN++; }
+      for (const it of items) { d.protein += +it.p || 0; d.treats += tpOf(it); d.kcalIn += +it.kcal || 0; d.foodN++; }
     }
     for (const f of S.fasts) {
       const hrs = (f.end - f.start) / 3.6e6, date = F.ui.ymd(new Date(f.end));
@@ -429,5 +437,5 @@ F.game = (() => {
   }
 
   return { compute, afterChange, sessionXP, detectPRs, prText, weekQuotas, metricText, levelInfo, statInfo, titleFor,
-    weightLb, kcal, age, hrMax, proteinTarget, sugarDaily, bmr, suggestKcal, e1rm, COOKIE_KCAL, QSTAT };
+    weightLb, kcal, age, hrMax, proteinTarget, treatBudget, tpOf, bmr, suggestKcal, e1rm, COOKIE_KCAL, QSTAT };
 })();

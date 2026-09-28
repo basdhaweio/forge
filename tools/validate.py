@@ -153,10 +153,23 @@ for q in prog["quests"]:
             err(f"quest {q['id']}.{st['id']}: unknown metric '{st.get('metric')}'")
         if "gte" not in st and "gteSetting" not in st:
             err(f"quest {q['id']}.{st['id']}: needs gte or gteSetting")
-for f in prog["foods"] + prog["treats"]:
-    for k in ("id", "name", "p", "sug", "kcal"):
+for f in prog["foods"]:
+    for k in ("id", "name", "p", "kcal"):
         if k not in f:
             err(f"food {f.get('id')}: missing {k}")
+for t in prog["treatSizes"]:
+    for k in ("id", "label", "pts", "kcal", "examples"):
+        if k not in t:
+            err(f"treat size {t.get('id')}: missing {k}")
+ING = {i["id"]: i for i in prog["ingredients"]}
+for i in prog["ingredients"]:
+    for k in ("id", "name", "unit", "p", "kcal"):
+        if k not in i:
+            err(f"ingredient {i.get('id')}: missing {k}")
+for m in prog["starterMeals"]:
+    for it in m["items"]:
+        if it["ing"] not in ING:
+            err(f"starter meal {m['id']}: unknown ingredient {it['ing']}")
 
 
 # ---- Resolver coverage: mirror of F.data.allowed() in js/data.js ----

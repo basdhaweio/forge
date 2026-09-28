@@ -421,11 +421,24 @@ details.acc > .acc-body { padding: 0 14px 14px; }
 
 /* ---------- Fuel ---------- */
 .foodchips { display: flex; gap: 6px; flex-wrap: wrap; }
-.foodchip { display: inline-flex; flex-direction: column; align-items: flex-start; padding: 8px 11px; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border); text-align: left; max-width: 220px; }
-.foodchip b { font-size: 0.85rem; font-weight: 600; line-height: 1.2; }
-.foodchip small { font-size: 0.72rem; color: var(--muted); }
-.foodchip.treat { background: color-mix(in srgb, var(--purple) 10%, var(--bg3)); }
-.foodchip:active { transform: scale(0.97); }
+.foodchip { display: inline-flex; align-items: stretch; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border); max-width: 280px; overflow: hidden; }
+.foodchip .fc-main { display: flex; flex-direction: column; align-items: flex-start; padding: 8px 11px; text-align: left; min-width: 0; }
+.foodchip .fc-main b { font-size: 0.85rem; font-weight: 600; line-height: 1.2; }
+.foodchip .fc-main small { font-size: 0.72rem; color: var(--muted); }
+.foodchip .fc-main:active { transform: scale(0.97); }
+.foodchip .fc-edit { padding: 0 10px; border-left: 1px solid var(--border); color: var(--muted); }
+.foodchip .fc-edit:hover { color: var(--text); background: var(--bg4); }
+.treatbtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.treatbtn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 10px; border-radius: 14px; background: color-mix(in srgb, var(--purple) 8%, var(--bg3)); border: 1px solid var(--border); text-align: center; }
+.treatbtn:active { transform: scale(0.97); }
+.treatbtn .ti { font-size: 1.8rem; line-height: 1.1; }
+.treatbtn .pts { font-size: 0.72rem; color: var(--purple); font-weight: 700; }
+.treatbtn small { font-size: 0.7rem; color: var(--muted); line-height: 1.25; }
+@media (max-width: 600px) {
+  .treatbtns { grid-template-columns: 1fr; }
+  .treatbtn { display: grid; grid-template-columns: 40px 1fr auto; grid-template-areas: 'i b p' 'i s s'; align-items: center; text-align: left; column-gap: 10px; padding: 10px 12px; }
+  .treatbtn .ti { grid-area: i; } .treatbtn b { grid-area: b; } .treatbtn .pts { grid-area: p; } .treatbtn small { grid-area: s; }
+}
 .foodrow { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
 .foodrow:last-child { border-bottom: none; }
 .foodrow .m { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }

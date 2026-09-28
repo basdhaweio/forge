@@ -24,7 +24,9 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
   - A round counter for Murph/Cindy
 - **Fuel**:
   - A protein target (0.8 g/lb by default)
-  - **Added sugar on a weekly budget**, so a baking day evens out, with treat presets and your own saved foods
+  - **Treats counted, not weighed**: small ½, regular 1, big 2, against a weekly budget (5 by default), so a baking day evens out
+  - **Meals**: build a meal from ingredients once (it totals the protein and calories), then log it with one tap; a chocolate protein smoothie is included
+  - Protein by portion ("palm of chicken, meat or fish" ≈ 30 g), so no weighing
   - Optional calories
   - A **fasting timer** that walks through what the body is doing hour by hour
 - **Body**: monthly tape measurements with trends, the V-taper ratio and waist-to-height ratio.

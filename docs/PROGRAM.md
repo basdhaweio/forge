@@ -86,7 +86,8 @@ This is how Forge builds each day and week, written so a physical therapist can 
 ## Fuel
 
 - **Protein:** 0.8 g per lb of bodyweight by default.
-- **Added sugar:** a daily pace of 36 g (the American Heart Association figure for men), judged **weekly** at 252 g, so a baking day balances out. Treat presets are rough numbers; home bakes can be saved with real values.
+- **Treats:** counted, not weighed. A treat is a cookie, brownie, muffin or soda; small ones count ½ and a slice of cake or a big bakery cookie counts 2. The budget is **weekly** (5 by default) so a baking day balances out. Fruit, milk and plain yogurt don't count.
+- **Meals:** built once from a list of ingredients, which totals the protein and calories, then logged with one tap. Protein can also be logged by portion (a palm of meat or fish ≈ 30 g).
 - **Calories:** optional. The suggested target is estimated maintenance (Mifflin-St Jeor × 1.45) minus 300.
 - **Fasting:** one 24–36 h fast a week. The timer shows these stages:
   - 0 h fed

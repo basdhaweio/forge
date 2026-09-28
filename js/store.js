@@ -23,7 +23,7 @@ F.store = (() => {
     settings: {
       theme: 'auto', location: 'home', travelLoc: 'room', phase: 1, sound: true, vibrate: true,
       walkMin: 30, schedule: null, quotas: {}, ptRoutine: null, slotPrefs: {}, runUnlocked: false,
-      nutrition: { protein: null, sugarDaily: 36, kcal: null, trackKcal: true },
+      nutrition: { protein: null, treatsWeek: 5, kcal: null, trackKcal: true },
       fast: { day: 0, targetH: 24 },
       goals: { thresholdLb: null, photoWaist: 2, photoArms: 1 },
       quests: {},
@@ -106,6 +106,7 @@ F.store = (() => {
   function addFood(date, item) { load(); (data.food[date] || (data.food[date] = [])).push(Object.assign({ id: F.ui.uid(), ts: Date.now() }, item)); touch(); save(); }
   function removeFood(date, id) { if (!data.food[date]) return; data.food[date] = data.food[date].filter((x) => x.id !== id); if (!data.food[date].length) delete data.food[date]; tomb('food', id); save(); }
   function addCustomFood(f) { load().foods.push(Object.assign({ id: F.ui.uid(), ts: Date.now() }, f)); touch(); save(); }
+  function updateCustomFood(id, patch) { const f = load().foods.find((x) => x.id === id); if (f) { Object.assign(f, patch, { u: Date.now() }); touch(); save(); } return f; }
   function removeCustomFood(id) { data.foods = data.foods.filter((x) => x.id !== id); tomb('foods', id); save(); }
 
   // ---- fasts ----
@@ -221,7 +222,7 @@ F.store = (() => {
   function reset() { data = DEFAULTS(); lastPrefs = prefsKey(); saveNow(); }
 
   return { load, save, saveNow, rev: () => rev, onChange, addSession, updateSession, removeSession, sessionsOn,
-    day, checkin, setCheckin, foodOn, addFood, removeFood, addCustomFood, removeCustomFood,
+    day, checkin, setCheckin, foodOn, addFood, removeFood, addCustomFood, updateCustomFood, removeCustomFood,
     startFast, endFast, cancelFast, removeFast, addMeasurement, updateMeasurement, removeMeasurement,
     isTravel, startTrip, endTrip, location, merge, snapshot, digest, exportJSON, importJSON, reset };
 })();

@@ -84,7 +84,7 @@
     const sh = sheet(h('div', null, h('h2', { text: 'Log something' }), h('div', { class: 'list mt' },
       h('div', { class: 'item', onClick: go(() => F.quickLog()) }, h('span', { class: 'emo', text: '🥋' }), h('div', { class: 't' }, h('b', { text: 'Activity' }), h('small', { text: 'Krav class, walk, ride, run, PT visit, anything' }))),
       h('div', { class: 'item', onClick: go(() => F.quickLog('walk')) }, h('span', { class: 'emo', text: '🚶' }), h('div', { class: 't' }, h('b', { text: 'Walk' }), h('small', { text: 'Minutes, distance or steps' }))),
-      h('div', { class: 'item', onClick: go(() => F.foodSheet()) }, h('span', { class: 'emo', text: '🍗' }), h('div', { class: 't' }, h('b', { text: 'Food' }), h('small', { text: 'Protein, sugar, calories' }))),
+      h('div', { class: 'item', onClick: go(() => F.foodSheet()) }, h('span', { class: 'emo', text: '🍗' }), h('div', { class: 't' }, h('b', { text: 'Food' }), h('small', { text: 'Meals, protein, treats' }))),
       h('div', { class: 'item', onClick: go(() => { location.hash = '#/fuel'; }) }, h('span', { class: 'emo', text: '⏳' }), h('div', { class: 't' }, h('b', { text: S.activeFast ? 'Fast in progress' : 'Start a fast' }), h('small', { text: 'Timer with body-state stages' }))),
       h('div', { class: 'item', onClick: go(() => F.measureSheet()) }, h('span', { class: 'emo', text: '📏' }), h('div', { class: 't' }, h('b', { text: 'Measurements' }), h('small', { text: 'Monthly tape check-in' }))))));
   };
@@ -260,14 +260,14 @@
 
     // ----- fuel snapshot -----
     const wk = C.thisWeek;
-    const sugarQ = wk && wk.list.find((q) => q.id === 'sugar');
-    const used = sugarQ && sugarQ.extra ? sugarQ.extra.used : 0, budget = F.game.sugarDaily() * 7;
+    const treatQ = wk && wk.list.find((q) => q.id === 'sugar');
+    const used = treatQ && treatQ.extra ? treatQ.extra.used : 0, budget = F.game.treatBudget();
     const fuel = h('div', { class: 'card' });
     const fs = h('div', { class: 'fuelsnap' },
       F.ui.ring(protein / pT, { size: 92, stroke: 9, label: num(protein), sub: `/ ${pT} g` }),
       h('div', { class: 'stack', style: { gap: '6px' } },
-        h('div', null, h('div', { class: 'row between small' }, h('span', { text: '🍪 Sugar budget (week)' }), h('b', { text: `${num(used)} / ${budget} g` })), progress(used / budget, used > budget ? 'red' : used > budget * 0.8 ? 'amber' : 'green')),
-        h('div', { class: 'small muted', text: `Today: ${num(dayRec.sugar || 0)} g added sugar${S.settings.nutrition.trackKcal ? ` · ${num(dayRec.kcalIn || 0)} kcal eaten` : ''} · ≈ ${num(dayRec.kcal || 0)} kcal burned` }),
+        h('div', null, h('div', { class: 'row between small' }, h('span', { text: '🍪 Treats this week' }), h('b', { text: `${num(used, 1)} / ${num(budget, 1)}` })), progress(budget ? used / budget : 1, used > budget ? 'red' : used > budget * 0.8 ? 'amber' : 'green')),
+        h('div', { class: 'small muted', text: `Today: ${F.fmtTreats(dayRec.treats || 0)}${S.settings.nutrition.trackKcal ? ` · ≈ ${num(dayRec.kcalIn || 0)} kcal eaten` : ''} · ≈ ${num(dayRec.kcal || 0)} kcal burned` }),
         h('div', { class: 'btngroup' }, h('button', { class: 'btn sm', onClick: () => F.foodSheet() }, icon('plus', 14), 'Food'), h('a', { class: 'btn sm ghost', href: '#/fuel' }, 'Fuel', icon('chevron', 14)))));
     fuel.append(h('div', { class: 'eyebrow', text: 'Fuel' }), fs);
     const fastMini = F.fastMini(date);
@@ -280,7 +280,7 @@
       for (const q of wk.list) {
         if (!q.target) continue;
         let val, pct;
-        if (q.kind === 'sugar') { val = h('div', { class: 'val', text: num(q.extra ? q.extra.used : 0) }, h('small', { text: ` / ${budget} g` })); pct = q.extra ? Math.min(1, q.extra.used / budget) : 0; }
+        if (q.kind === 'sugar') { val = h('div', { class: 'val', text: num(q.extra ? q.extra.used : 0, 1) }, h('small', { text: ` / ${num(budget, 1)} treats` })); pct = q.extra && budget ? Math.min(1, q.extra.used / budget) : 0; }
         else { val = h('div', { class: 'val', text: num(q.done) }, h('small', { text: ' / ' + q.target })); pct = q.done / q.target; }
         grid.append(h('div', { class: 'w' + (q.met ? ' met' : '') }, h('div', { class: 'top' }, h('span', { text: q.icon + ' ' + q.label }), q.met ? h('span', { text: '✓' }) : null), val, progress(pct, q.kind === 'sugar' ? (pct > 1 ? 'red' : 'green') : q.met ? 'green' : '')));
       }
