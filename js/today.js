@@ -117,10 +117,11 @@
     const travel = F.store.isTravel(date);
     const locbar = h('div', { class: 'locbar' });
     const setLoc = (fn) => { fn(); F.store.save(); F.app.render(); };
+    const todayLoc = F.store.location(date);
     if (!travel) {
       for (const l of ['home', 'gym']) {
         const L = F.data.loc(l);
-        locbar.append(h('button', { class: S.settings.location === l ? 'on' : '', onClick: () => setLoc(() => { S.settings.location = l; }) }, L.icon + ' ' + L.label));
+        locbar.append(h('button', { class: todayLoc === l ? 'on' : '', onClick: () => { F.store.setLocation(date, l); F.app.render(); } }, L.icon + ' ' + (l === 'gym' ? 'Gym day' : L.label)));
       }
       locbar.append(h('button', { class: 'trip', onClick: () => setLoc(() => { F.store.startTrip(date); toast('Travel mode on — plans use your travel kit and weekly quests scale down.', 3500); }) }, '✈️ Travelling'));
     } else {
@@ -137,7 +138,8 @@
         C.streak.freezes ? h('span', { title: 'Streak freezes banked — a missed day spends one instead of breaking the streak', text: '· ' + '❄️'.repeat(C.streak.freezes) }) : null),
       h('div', { class: 'mt-s' }, h('div', { class: 'xpbar', style: { height: '8px' } }, h('i', { style: { width: C.level.pct * 100 + '%' } }))),
       locbar,
-      travel ? h('div', { class: 'small muted mt-s', text: 'Travel mode: sessions use your travel kit, the 4×4 goes machine-free if needed, and weekly quests scale to the days away.' }) : null));
+      travel ? h('div', { class: 'small muted mt-s', text: 'Travel mode: sessions use your travel kit, the 4×4 goes machine-free if needed, and weekly quests scale to the days away.' })
+        : todayLoc === 'gym' ? h('div', { class: 'small muted mt-s', text: 'Gym day: today’s strength session becomes a gym session (cables, pulldown, machines). Tomorrow goes back to home.' }) : null));
 
     // ----- check-in -----
     const ci = F.store.checkin(date);

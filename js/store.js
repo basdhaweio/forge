@@ -137,7 +137,9 @@ F.store = (() => {
     for (const t of data.trips) if (!t.end && t.start < date) t.end = F.ui.addDays(date, -1);
     save();
   }
-  function location(date = F.ui.today()) { const S = load(); return isTravel(date) ? S.settings.travelLoc : S.settings.location; }
+  // Home or gym is picked per day (it resets to home tomorrow); trips set the travel kit for every day they cover.
+  function location(date = F.ui.today()) { const S = load(); return isTravel(date) ? S.settings.travelLoc : (S.days[date] && S.days[date].loc) || 'home'; }
+  function setLocation(date, loc) { const d = day(date); d.loc = loc; d.locTs = Date.now(); touch(); save(); }
 
   // ---- merging: backups and sync use the same rules ----
   const stamp = (x) => x.u || x.ts || 0;
@@ -163,7 +165,7 @@ F.store = (() => {
     return JSON.stringify([
       ids(d.sessions), ids(d.measurements), ids(d.fasts), ids(d.foods),
       Object.keys(food).sort().map((k) => k + '=' + ids(food[k])).join(';'),
-      Object.keys(days).sort().map((k) => k + '=' + ((days[k] && days[k].checkin && days[k].checkin.ts) || 0)).join(';'),
+      Object.keys(days).sort().map((k) => k + '=' + ((days[k] && days[k].checkin && days[k].checkin.ts) || 0) + '/' + ((days[k] && days[k].locTs) || 0)).join(';'),
       Object.entries(d.deleted || {}).map(([k, v]) => k + ':' + Object.keys(v || {}).sort().join(',')).sort().join(';'),
       d.prefsU || 0, d.activeFastU || 0,
       Object.keys(seen.ach || {}).length, Object.keys(seen.steps || {}).length, Object.keys(seen.weeks || {}).length, Object.keys(seen.q || {}).length, seen.level || 1,
@@ -186,9 +188,10 @@ F.store = (() => {
       if (list.length) d.food[date] = list; else delete d.food[date];
     }
     for (const [date, dd] of Object.entries(inc.days || {})) {
-      if (!dd || !dd.checkin) continue;
+      if (!dd) continue;
       const mine = d.days[date] || (d.days[date] = {});
-      if (!mine.checkin || (dd.checkin.ts || 0) > (mine.checkin.ts || 0)) mine.checkin = dd.checkin;
+      if (dd.checkin && (!mine.checkin || (dd.checkin.ts || 0) > (mine.checkin.ts || 0))) mine.checkin = dd.checkin;
+      if (dd.loc && (dd.locTs || 0) > (mine.locTs || 0)) { mine.loc = dd.loc; mine.locTs = dd.locTs; }
     }
     if (inc.profile.onboarded && (preferRemotePrefs || !d.profile.onboarded || (inc.prefsU || 0) > (d.prefsU || 0))) {
       for (const k of PREFS) d[k] = inc[k];
@@ -224,7 +227,7 @@ F.store = (() => {
   return { load, save, saveNow, rev: () => rev, onChange, addSession, updateSession, removeSession, sessionsOn,
     day, checkin, setCheckin, foodOn, addFood, removeFood, addCustomFood, updateCustomFood, removeCustomFood,
     startFast, endFast, cancelFast, removeFast, addMeasurement, updateMeasurement, removeMeasurement,
-    isTravel, startTrip, endTrip, location, merge, snapshot, digest, exportJSON, importJSON, reset };
+    isTravel, startTrip, endTrip, location, setLocation, merge, snapshot, digest, exportJSON, importJSON, reset };
 })();
 
 /* Units: everything is stored in lb / in / mi; converted only for display and input. */

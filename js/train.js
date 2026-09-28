@@ -75,7 +75,8 @@
       h('div', { class: 'small muted mt-s', text: e.equip.length ? 'Needs: ' + e.equip.map((r) => r.split('|').map(F.data.equipLabel).join(' or ')).join(' + ') : 'No equipment' }),
       h('ol', { class: 'cues' }, e.cues.map((cu) => h('li', { text: cu }))),
       e.note ? h('div', { class: 'callout mt small', text: e.note }) : null,
-      h('div', { class: 'small mt ' + (why ? 'amber' : 'green'), text: why ? 'Right now: ' + why : `Available at ${F.data.loc(c.loc).label.toLowerCase()}.` }));
+      h('div', { class: 'small mt' }, ['home', 'gym'].map((l) => { const ok = F.data.hasEquip(e, F.data.kit(l)); return h('div', { class: ok ? 'green' : 'muted', text: `${F.data.loc(l).icon} ${F.data.loc(l).label}: ${ok ? 'yes' : 'needs ' + F.data.missingEquip(e, F.data.kit(l)).join(', ')}` }); })),
+      why && !/^needs /.test(why) ? h('div', { class: 'small amber mt-s', text: 'Right now: ' + why }) : null);
     const best = [];
     if (T.e1rm[id]) best.push('est. 1RM ' + F.u.w(T.e1rm[id]));
     if (T.maxW[id]) best.push('heaviest ' + F.u.w(T.maxW[id]));
@@ -202,13 +203,15 @@
   function library() {
     const out = h('div');
     const S = F.store.load();
-    let cat = 'all', q = '', fits = false, safe = !!(S.profile.injuries.knee || S.profile.injuries.lumbar);
+    let cat = 'all', q = '', where = 'home', safe = !!(S.profile.injuries.knee || S.profile.injuries.lumbar);
+    const homeKit = F.data.kit('home'), gymKit = F.data.kit('gym');
     const input = h('input', { type: 'search', placeholder: 'Search exercises', autocomplete: 'off' });
+    const whereSeg = F.ui.seg([{ v: 'home', label: '🏠 At home' }, { v: 'gym', label: '🏋️ Gym only' }, { v: 'all', label: 'All' }], where, (v) => { where = v; run(); }, 'mt-s');
     const chips = h('div', { class: 'chips mt-s' });
     const draw = () => {
       chips.innerHTML = '';
       for (const [k, label] of CATS) chips.append(h('button', { class: 'chip small' + (cat === k ? ' on' : ''), text: label, onClick: () => { cat = k; draw(); } }));
-      chips.append(F.ui.chip('Fits here', fits, (on) => { fits = on; run(); }, 'small'), F.ui.chip('Safe for me', safe, (on) => { safe = on; run(); }, 'small'));
+      chips.append(F.ui.chip('Safe for me', safe, (on) => { safe = on; run(); }, 'small'));
       run();
     };
     const results = h('div', { class: 'list exlist mt' });
@@ -220,20 +223,22 @@
       const list = F.data.exercises().filter((e) => {
         if (cat !== 'all' && e.cat !== cat) return false;
         if (ql && !(e.name.toLowerCase().includes(ql) || (e.tags || []).some((t) => t.includes(ql)))) return false;
-        if (fits && !F.data.hasEquip(e, c.kit)) return false;
+        const atHome = F.data.hasEquip(e, homeKit);
+        if (where === 'home' && !atHome) return false;
+        if (where === 'gym' && (atHome || !F.data.hasEquip(e, gymKit))) return false;
         if (safe && ((inj.knee && e.knee !== 'ok') || (inj.lumbar && e.back !== 'ok') || (inj.shoulder && e.sh && e.sh !== 'ok'))) return false;
         return true;
       });
-      count.textContent = `${list.length} exercise${list.length === 1 ? '' : 's'}` + (safe ? ' · only ones flagged fine for your knees/back' : '');
+      count.textContent = `${list.length} exercise${list.length === 1 ? '' : 's'}` + (where === 'home' ? ' you can do with your home equipment' : where === 'gym' ? ' that need the gym' : '') + (safe ? ' · only ones flagged fine for your knees/back' : '') + '. Home and gym equipment are set in Settings → Equipment.';
       results.innerHTML = '';
       for (const e of list) results.append(h('div', { class: 'item', onClick: () => F.exSheet(e.id) },
         h('span', { class: 'emo', text: F.data.stat(e.stat).icon }),
         h('div', { class: 't' }, h('b', { text: e.name }), h('small', { text: e.cues[0] })),
-        F.flagsRow(e), (e.tags || []).includes('avoid') ? pill('not programmed', 'red') : null));
+        F.flagsRow(e), (e.tags || []).includes('avoid') ? pill('not programmed', 'red') : !F.data.hasEquip(e, homeKit) ? pill(F.data.hasEquip(e, gymKit) ? 'gym' : 'needs gear', F.data.hasEquip(e, gymKit) ? 'sky' : '') : null));
     }
     let t;
     input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { q = input.value.trim(); run(); }, 120); });
-    out.append(input, chips, count, results);
+    out.append(input, whereSeg, chips, count, results);
     draw();
     return out;
   }
@@ -244,7 +249,7 @@
   const { h, pill } = F.ui;
   F.views.plan = () => {
     const S = F.store.load(), P = F.data.prog(), today = F.ui.today();
-    const loc = S.settings.location;
+    const loc = 'home';
     const c = F.data.ctx(today, { loc, knee: 0, back: 0 });
     const inj = S.profile.injuries;
     const flag = (label, v) => (v && v !== 'ok' ? h('span', { class: 'flag ' + v, text: `${label} ${v}` }) : null);
@@ -256,11 +261,12 @@
     const sched = S.settings.schedule || P.schedule;
     const week = h('table', { class: 'table mt' }, h('tbody', null, [1, 2, 3, 4, 5, 6, 0].map((d) => h('tr', null, h('td', { text: F.ui.DAYS[d] }), h('td', { text: (sched[String(d)] || []).map((id) => (F.data.session(id) || {}).name).filter(Boolean).join(' + ') || 'Rest' })))));
     wrap.append(h('h2', { class: 'mt', text: 'Week' }), week, h('p', { class: 'small muted', text: 'Daily: PT routine, two isometric holds, 10 min rolling/stretching, a walk. Weekly: one 24–36 h fast.' }));
-    const ids = ['pt', 'holds'].concat([...new Set([1, 2, 3, 4, 5, 6, 0].flatMap((d) => sched[String(d)] || []))]);
+    const ids = ['pt', 'holds'].concat([...new Set([1, 2, 3, 4, 5, 6, 0].flatMap((d) => sched[String(d)] || []))], ['gymA', 'gymB']);
     for (const id of ids) {
       let plan;
-      try { plan = F.data.buildPlan(id, today, { loc, knee: 0, back: 0 }); } catch (e) { continue; }
-      const sec = h('div', { class: 'card mt' }, h('h3', { text: plan.title + (id === 'holds' ? ' (today’s rotation)' : '') }));
+      const tplLoc = (F.data.session(id) || {}).loc;
+      try { plan = F.data.buildPlan(id, today, { loc: tplLoc || loc, knee: 0, back: 0 }); } catch (e) { continue; }
+      const sec = h('div', { class: 'card mt' }, h('h3', { text: plan.title + (id === 'holds' ? ' (today’s rotation)' : '') + (tplLoc ? ' — at the gym' : '') }));
       for (const b of plan.blocks) {
         const rows = b.items.filter((it) => it.ex && !it.why).map((it) => {
           const e = F.data.ex(it.ex);

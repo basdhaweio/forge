@@ -81,6 +81,14 @@ F.app = (() => {
       return;
     }
     if (!S.equipment && S.profile.onboarded) { S.equipment = JSON.parse(JSON.stringify(F.data.prog().kits)); F.store.save(); }
+    // One-time (2026-09-28): John's home has a rack and a heavy bag; kits saved before they were defaults lack them.
+    if (S.equipment && S.profile.onboarded && !S.settings.migHomeRackBag) {
+      const home = new Set(S.equipment.home || []);
+      const added = ['rack', 'bag'].filter((x) => !home.has(x));
+      added.forEach((x) => home.add(x));
+      S.equipment.home = [...home]; S.settings.migHomeRackBag = true; F.store.save();
+      if (added.length) setTimeout(() => F.ui.toast('Added your rack and heavy bag to Home equipment — Settings → Equipment to adjust', 4500), 1500);
+    }
     document.getElementById('log-btn').addEventListener('click', () => F.quickMenu());
     window.addEventListener('hashchange', render);
     render();

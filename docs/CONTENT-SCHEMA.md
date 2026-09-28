@@ -34,9 +34,10 @@ Filter rules (`blocked()` in `js/data.js`):
 ## data/program.json
 
 - `slots`: `{ id: { name, cands: [exercise ids, most advanced first] } }`. The player takes the first candidate that passes the filter. Your swap choice (`settings.slotPrefs`) wins when it passes too.
-- `sessions[]`: `{ id, name, sub, icon, group, tags[], stat, met, est, blocks[], requires?, alt?, flare?: {knee, back}, gate?, desc?, finishChecks?, dynamic? }`
+- `sessions[]`: `{ id, name, sub, icon, group, tags[], stat, met, est, blocks[], loc?, requires?, alt?, flare?: {knee, back}, gate?, desc?, finishChecks?, dynamic? }`
   - `tags` drive the weekly quests (`lift`, `krav`, `n4x4`, `z2`, `yoga`, `murph`, `pt`, `walk`, `mobility`, `holds`, `recovery`, `benchmark`…).
   - `requires` / `alt`: if the kit can't satisfy `requires`, the `alt` session is used (e.g. the 4×4 becomes `n4x4_room`).
+  - `loc: "gym"`: the session always resolves with the gym kit (the hotel-gym kit while travelling), whatever Today is set to. On a Gym day the schedule's first `lift` session is replaced by whichever of `gymA` / `gymB` was done less recently.
   - `flare`: the session to swap in when the knee or back check-in is 2.
   - `dynamic`: `pt` (built from the PT routine), `holds` (from `isoRotation`) or `mobility` (from `mobilityRotation`).
 - Block types:
@@ -46,6 +47,7 @@ Filter rules (`blocked()` in `js/data.js`):
   - `timer`: `{timer: {kind: intervals|steady|amrap|stopwatch, warm, work, rest, rounds, cool, workLabel(s), restLabel, hr?, hrZone?, altLabel?}, log: [dist|hr|steps|rounds]}`.
   - `circuit`: rounds tracker. `{rounds, rest, progress?, max?, items: [{slot|ex, reps}]}`. With `progress`, the target is last time + 1.
   - `core: true` keeps a block in "short on time" mode.
+  - `requires: [equipment ids]` on a block skips it when the kit lacks one (`"a|b"` means either). Example: the Krav heavy-bag rounds need `bag`.
 - `schedule`: weekday (`"0"` = Sunday) → session ids. The first Murph day of each month becomes `benchmark.with`.
 - `dailyTasks`, `quotas` (with `home` / `travel` targets), `activities` (quick log), `achievements`, `quests`.
 - Metric names are listed in `tools/validate.py` (`METRIC`) and implemented in `metric()` in `js/game.js`: `count:<tag>`, `holdBest:<ex>`, `e1rmBw:<ex>`, `carryPct:<ex>:<secs>`, `distBest:<activity>`, …

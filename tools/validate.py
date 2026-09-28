@@ -117,6 +117,10 @@ for s in prog["sessions"]:
             err(f"{bw}: bad type {b.get('type')}")
         if b.get("type") == "timer" and b.get("timer", {}).get("kind") not in TIMERS:
             err(f"{bw}: bad timer kind")
+        for req in b.get("requires", []):
+            for alt in req.split("|"):
+                if alt not in EQUIP:
+                    err(f"{bw}: requires unknown equipment '{alt}'")
         for it in b.get("items", []):
             check_ref(bw, it)
             if "slot" in it:
@@ -198,17 +202,23 @@ for phase in (1, 2, 3):
     for loc in ("home", "room", "gym", "hotelgym"):
         scenarios.append((f"{loc} p{phase}", kits[loc], phase, 0, 0))
 scenarios += [("bare room p1", kits["bare"], 1, 0, 0), ("home knee-flare", kits["home"], 1, 2, 0), ("home back-flare", kits["home"], 1, 0, 2)]
+def gym_only(sid):
+    users = slot_users.get(sid, ())
+    return bool(users) and all(SESS.get(u, {}).get("loc") == "gym" for u in users)
+
+
 def swaps_out(sid, joint):
     """True when every session using this slot is replaced by a recovery session on a flare of `joint`."""
     return all(joint in (SESS[u].get("flare") or {}) for u in slot_users.get(sid, ()))
 
 
+gym_scenarios = [(f"gym p{p}", kits["gym"], p, 0, 0) for p in (1, 2, 3)] + [("gym knee-flare", kits["gym"], 1, 2, 0), ("gym back-flare", kits["gym"], 1, 0, 2)]
 for sid in sorted(used_slots):
-    for name, kit, phase, kf, bf in scenarios:
+    for name, kit, phase, kf, bf in (gym_scenarios if gym_only(sid) else scenarios):
         if (kf and swaps_out(sid, "knee")) or (bf and swaps_out(sid, "back")):
             continue
         if not any(allowed(EX[c], kit, phase, kf, bf) for c in SLOTS[sid]["cands"] if c in EX):
-            (err if name in ("home p1", "room p1") else warn)(f"slot {sid}: nothing available for {name}")
+            (err if name in ("home p1", "room p1", "gym p1") else warn)(f"slot {sid}: nothing available for {name}")
 
 print(f"{len(EX)} exercises, {len(SLOTS)} slots, {len(SESS)} sessions, {len(prog['achievements'])} achievements, {len(prog['quests'])} quests")
 for w in warnings:

@@ -33,7 +33,7 @@ F.data = (() => {
   function ctx(date = F.ui.today(), over = {}) {
     const S = F.store.load();
     const travel = F.store.isTravel(date);
-    const l = over.loc || (travel ? S.settings.travelLoc : S.settings.location);
+    const l = over.loc || F.store.location(date);
     const ci = F.store.checkin(date) || {};
     return {
       date, loc: l, travel, kit: kit(l), phase: S.settings.phase || 1,
@@ -154,7 +154,9 @@ F.data = (() => {
   function buildPlan(id, date = F.ui.today(), over = {}) {
     const tpl = templateFor(id, date);
     if (!tpl) throw new Error('Unknown session ' + id);
-    const c = ctx(date, over);
+    // Gym sessions always use the gym kit (the hotel gym on a trip), whatever today is set to.
+    const tplLoc = tpl.loc && !over.loc ? (F.store.isTravel(date) ? 'hotelgym' : tpl.loc) : null;
+    const c = ctx(date, tplLoc ? Object.assign({}, over, { loc: tplLoc }) : over);
     const plan = {
       tpl: tpl.id, date, title: tpl.name, sub: tpl.sub, icon: tpl.icon, desc: tpl.desc || '', tags: tpl.tags.slice(), stat: tpl.stat,
       met: tpl.met, est: tpl.est, loc: c.loc, phase: c.phase, finishChecks: tpl.finishChecks || [], blocks: [],
@@ -162,6 +164,7 @@ F.data = (() => {
     const used = new Set(); // don't serve the same exercise twice in one session when a slot has other options
     for (const b of tpl.blocks) {
       if (b.onlyFocus && !c.focus[b.onlyFocus]) continue;
+      if (b.requires && !b.requires.every((req) => req.split('|').some((a) => c.kit.has(a)))) continue;  // e.g. heavy-bag rounds with no bag
       const pb = { name: b.name, type: b.type, core: !!b.core, rounds: b.rounds || 0, rest: b.rest ?? 60, log: b.log || [], progress: !!b.progress, max: b.max || 0, items: [], done: false, vals: {} };
       if (b.timer) {
         pb.timer = Object.assign({}, b.timer);
@@ -237,6 +240,14 @@ F.data = (() => {
     const bm = st.prog.benchmark;
     if (bm && F.ui.parse(date).getDate() <= 7) ids = ids.map((x) => (x === bm.replace ? bm.with : x));
     const c = ctx(date);
+    // Gym day: the strength session becomes the next gym session (A/B, whichever was done longer ago).
+    if (c.loc === 'gym') {
+      const lastDone = (tid) => { const ss = S.sessions; for (let i = ss.length - 1; i >= 0; i--) if (ss[i].tpl === tid) return ss[i].date; return ''; };
+      const next = lastDone('gymA') <= lastDone('gymB') ? 'gymA' : 'gymB';
+      let swapped = false;
+      ids = ids.map((x) => { const t = st.sess[x]; if (!swapped && t && (t.tags || []).includes('lift')) { swapped = true; return next; } return x; });
+      if (!swapped) ids.unshift(next);
+    }
     return ids.map((x) => resolveSession(x, c)).filter(Boolean);
   }
 

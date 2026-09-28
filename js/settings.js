@@ -172,9 +172,18 @@
     let eqLoc = 'home';
     const eqBox = h('div');
     const eqTabs = h('div', { class: 'tabs' });
-    const drawEq = () => { eqTabs.replaceChildren(...P.locations.map((l) => h('button', { class: eqLoc === l.id ? 'active' : '', text: l.icon + ' ' + l.label, onClick: () => { eqLoc = l.id; drawEq(); } }))); eqBox.replaceChildren(equipEditor(eqLoc)); };
+    const EQ_HINT = {
+      home: 'Everything at home — rack, TRX, heavy bag, bands and PT gear. Every session uses this list unless Today is set to Gym day.',
+      gym: 'The gym you visit (the Y). Gym day A and B use this list, and so does anything you start while Today is set to Gym day.',
+      room: 'What you pack for a trip. A TRX and a band go a long way.',
+      hotelgym: 'A typical hotel gym.',
+    };
+    const drawEq = () => {
+      eqTabs.replaceChildren(...P.locations.map((l) => h('button', { class: eqLoc === l.id ? 'active' : '', text: l.icon + ' ' + l.label, onClick: () => { eqLoc = l.id; drawEq(); } })));
+      eqBox.replaceChildren(h('p', { class: 'small muted mb', text: EQ_HINT[eqLoc] || '' }), equipEditor(eqLoc));
+    };
     drawEq();
-    wrap.append(sec('equipment', 'Equipment', h('p', { class: 'small muted mb', text: 'What’s available at each place. Hotel room assumes whatever you pack — a TRX and a band go a long way.' }), eqTabs, eqBox,
+    wrap.append(sec('equipment', 'Equipment', eqTabs, eqBox,
       h('button', { class: 'btn xs ghost mt-s', text: 'Reset this kit', onClick: () => { st.equipment[eqLoc] = P.kits[eqLoc].slice(); save(); drawEq(); } })));
 
     // Nutrition

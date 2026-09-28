@@ -67,10 +67,15 @@ This is how Forge builds each day and week, written so a physical therapist can 
 | Walking minutes | 150 | 150 |
 | Hold time (min) | 10 | 8 |
 | Protein days | 5 | 4 |
-| Added sugar within budget | 252 g/week | 252 g/week |
+| Treats within the weekly budget | 1 | 1 |
 
 ## Adapting
 
+- **Home is the default.** Every session is planned for the home kit: rack, TRX, heavy bag, bands, PT gear and the bike (edit it in Settings → Equipment → Home). Krav adds three heavy-bag rounds when there's a bag.
+- **Gym day** (tap it on Today, for that day only): the day's strength session becomes a gym session, alternating A and B:
+  - **Gym day A**: lat pulldown, cable or machine row, chest press, shoulder press, cable curls and pushdowns, face pulls, Pallof press.
+  - **Gym day B**: a goblet box squat and cable pull-through in Phase 1, then from Phase 2 a limited-depth leg press and a trap-bar deadlift from high handles. Also machine leg curl, partial-range leg extension, chest press, row and arms.
+  - Both keep the same knee and back rules as home, and on a flared check-in they swap to recovery like any other strength day.
 - **Check-in "grumpy" (knee or back):** gentler variants are picked first, for example a Spanish squat instead of a TRX squat, or a single-leg bridge instead of step-ups.
 - **Check-in "flared":** strength, Krav, Murph, the 4×4, Zone 2 and walk-run all become a recovery session, and anything not flagged fine for that joint is filtered out (daily holds drop to quad sets).
   - Knee-calm day: heel props (a check that the knee still straightens), quad sets, short-arc quads, upper body, easy blood flow.
