@@ -2,7 +2,12 @@
 (() => {
   const { h, icon, toast, sheet, num, pill, progress } = F.ui;
 
+  function closeIdleActive(src) {
+    const S = F.store.load();
+    if (S.active && S.active.src === src && !F.activeProgress(S.active)) { S.active = null; F.timer.stopRest(); F.store.save(); }
+  }
   function quickComplete(task, date) {
+    closeIdleActive(task.session);
     const tpl = F.data.templateFor(task.session, date);
     const c = F.data.ctx(date);
     const entries = task.session === 'pt'
@@ -36,6 +41,7 @@
     return 60;
   }
   function logFormal(date) {
+    closeIdleActive('pt');
     const P = F.data.prog(), S = F.store.load();
     const act = P.activities.find((a) => a.id === 'pt_visit');
     const minutes = formalMinutes();
@@ -91,10 +97,17 @@
 
     // ----- resume banner -----
     if (S.active) {
-      const mins = Math.round((Date.now() - S.active.start) / 60000);
+      const A = S.active;
+      const mins = Math.round(F.activeMs(A) / 60000);
+      const discard = async (ev) => {
+        ev.preventDefault(); ev.stopPropagation();
+        if (!(await F.ui.confirmDlg(`Discard ${A.plan.title}?`, { ok: 'Discard', danger: true, sub: 'Nothing from it gets logged.' }))) return;
+        S.active = null; F.timer.stopRest(); F.store.saveNow(); F.app.render();
+      };
       wrap.append(h('a', { class: 'card glow row nowrap', href: '#/play', style: { color: 'inherit' } },
-        h('span', { style: { fontSize: '1.6rem' }, text: S.active.plan.icon }),
-        h('div', { class: 'grow' }, h('b', { text: 'Resume ' + S.active.plan.title }), h('div', { class: 'small muted', text: `${mins} min in · ${F.ui.relDay(S.active.plan.date)}` })),
+        h('span', { style: { fontSize: '1.6rem' }, text: A.plan.icon }),
+        h('div', { class: 'grow' }, h('b', { text: 'Resume ' + A.plan.title }), h('div', { class: 'small muted', text: `${A.pausedAt ? 'Paused · ' : ''}${F.ui.dur(mins)} on the clock · opened ${F.ui.relDay(A.plan.date)}` })),
+        h('button', { class: 'btn sm ghost', 'aria-label': 'Discard this session', title: 'Discard', onClick: discard }, icon('x', 14)),
         h('span', { class: 'btn sm primary' }, icon('play', 14), 'Resume')));
     }
 

@@ -283,7 +283,13 @@ details.acc > .acc-body { padding: 0 14px 14px; }
 @media (min-width: 761px) { .player-head { margin: -18px -18px 14px; padding: 10px 18px; } }
 .player-head .t { flex: 1; min-width: 0; }
 .player-head .t b { display: block; font-family: var(--display); font-size: 1.3rem; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.player-head .clock { font-family: var(--display); font-size: 1.25rem; font-variant-numeric: tabular-nums; color: var(--accent2); }
+.player-head .t small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clockbtn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 8px; border-radius: 999px; background: var(--bg3); border: 1px solid var(--border2); color: var(--accent2); flex: none; }
+.clockbtn .clock { font-family: var(--display); font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.clockbtn .ci { display: inline-flex; opacity: 0.85; }
+.clockbtn.paused { color: var(--muted); border-style: dashed; }
+.clockbtn.paused .clock::after { content: ' paused'; font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.04em; }
+@media (max-width: 420px) { .clockbtn.paused .clock::after { content: ''; } .player-head .iconbtn { width: 32px; } }
 .block { margin-top: 16px; }
 .block-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .block-head h3 { margin: 0; font-family: var(--display); font-size: 1.2rem; letter-spacing: 0.02em; }

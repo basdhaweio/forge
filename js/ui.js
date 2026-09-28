@@ -71,6 +71,7 @@ F.ui = (() => {
     list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
     chart: '<path d="M4 20V4M4 20h16M8 16l4-5 3 3 5-7"/>',
     download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+    restart: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/>',
     upload: '<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>',
   };
   function icon(name, size = 20) {

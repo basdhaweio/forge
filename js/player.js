@@ -26,6 +26,17 @@
     return '';
   };
 
+  // ---------- session clock: wall time minus pauses ----------
+  // A.pausedAt is set while paused; A.pausedMs holds earlier pauses; A.lastAct is the last time anything was logged.
+  F.activeMs = (A) => Math.max(0, (A.pausedAt || Date.now()) - A.start - (A.pausedMs || 0));
+  const pauseClock = (A) => { if (!A.pausedAt) A.pausedAt = Date.now(); };
+  const resumeClock = (A) => { if (A.pausedAt) { A.pausedMs = (A.pausedMs || 0) + (Date.now() - A.pausedAt); A.pausedAt = null; } };
+  function restartClock(A) { A.start = Date.now(); A.pausedMs = 0; A.pausedAt = null; A.lastAct = Date.now(); A.plan.date = F.ui.today(); }
+  // Has anything been ticked or logged in this session?
+  F.activeProgress = (A) => !!A && A.plan.blocks.some((pb) => (pb.type === 'sets' && pb.items.some((it) => it.sets.some((z) => z.done)))
+    || ((pb.type === 'list' || pb.type === 'flow') && pb.items.some((it) => it.done || (it.bubbles && it.bubbles.some(Boolean))))
+    || (pb.type === 'circuit' && pb.roundsDone) || (pb.type === 'timer' && pb.done));
+
   // ---------- start / preview ----------
   F.startSession = async (id, { date, loc } = {}) => {
     const S = F.store.load();
@@ -36,7 +47,7 @@
       if (!ok) { location.hash = '#/play'; return; }
     }
     try {
-      S.active = { src: id, plan: F.data.buildPlan(id, date, { loc }), start: Date.now(), express: false };
+      S.active = { src: id, plan: F.data.buildPlan(id, date, { loc }), start: Date.now(), express: false, lastAct: Date.now(), pausedMs: 0, pausedAt: null };
     } catch (e) { toast(e.message, 3000); return; }
     F.store.saveNow();
     location.hash = '#/play';
@@ -65,19 +76,72 @@
     const A = S.active;
     if (!A) return h('div', { class: 'empty' }, 'No session in progress. ', h('a', { href: '#/', text: 'Back to Today' }));
     const plan = A.plan;
-    const save = () => F.store.save();
+    const persist = () => F.store.save();
+    // Any logging action counts as activity, and un-pauses a paused clock.
+    const save = () => {
+      A.lastAct = Date.now();
+      if (A.pausedAt) { resumeClock(A); paintClock(); toast('Timer resumed', 1400); }
+      F.store.save();
+    };
     const wrap = h('div', { class: 'player' });
-    const clock = h('span', { class: 'clock' });
-    const tickClock = () => { const s = (Date.now() - A.start) / 1000; clock.textContent = s >= 3600 ? F.ui.hms(s) : mmss(s); };
-    tickClock();
-    const iv = setInterval(tickClock, 1000);
+    const clockTxt = h('span', { class: 'clock' });
+    const clockIco = h('span', { class: 'ci' });
+    const clockBtn = h('button', { class: 'clockbtn', onClick: () => { if (A.pausedAt) resumeClock(A); else pauseClock(A); persist(); paintClock(); } }, clockIco, clockTxt);
+    let shownPaused = null;
+    function paintClock() {
+      const s = F.activeMs(A) / 1000;
+      clockTxt.textContent = s >= 3600 ? F.ui.hms(s) : mmss(s);
+      const p = !!A.pausedAt;
+      if (p !== shownPaused) {
+        shownPaused = p;
+        clockIco.replaceChildren(icon(p ? 'play' : 'pause', 14));
+        clockBtn.classList.toggle('paused', p);
+        clockBtn.setAttribute('aria-label', p ? 'Session timer paused — tap to resume' : 'Pause the session timer');
+        clockBtn.title = p ? 'Paused — tap to resume' : 'Tap to pause';
+      }
+    }
+    paintClock();
+    const iv = setInterval(paintClock, 1000);
     wrap._cleanup = () => clearInterval(iv);
     const L = F.data.loc(plan.loc);
     wrap.append(h('div', { class: 'player-head' },
       h('a', { class: 'iconbtn', href: '#/', 'aria-label': 'Back to Today (session stays open)' }, icon('back')),
       h('div', { class: 't' }, h('b', { text: plan.icon + ' ' + plan.title }), h('small', { class: 'muted', text: `${L.icon} ${L.label} · Phase ${plan.phase}` })),
-      clock,
+      clockBtn,
+      h('button', { class: 'iconbtn', 'aria-label': 'Restart, start over or discard', title: 'Restart, start over or discard', onClick: () => sessionMenu(false) }, icon('restart', 19)),
       h('button', { class: 'btn sm primary', text: 'Finish', onClick: () => finish() })));
+
+    // Restart the clock, start over, or throw the session away. Also shown when a session was left open for a while.
+    function sessionMenu(stale) {
+      const onClock = F.ui.dur(F.activeMs(A) / 60000);
+      const since = plan.date !== F.ui.today() ? ` — opened ${F.ui.relDay(plan.date)}` : '';
+      const ticked = F.activeProgress(A);
+      const sh = sheet(h('div', { class: 'stack' },
+        h('h2', { text: stale ? `Still doing ${plan.title}?` : 'Session timer' }),
+        h('p', { class: 'small muted', text: stale
+          ? `It’s been open with nothing logged for a while (${onClock} on the clock${since}). Restart the clock so the minutes come out right.`
+          : `${onClock} on the clock${A.pausedAt ? ', paused' : ''}.` }),
+        h('button', { class: 'btn primary block', onClick: () => { restartClock(A); persist(); sh.close(); paintClock(); toast('Clock restarted', 1600); } }, icon('restart', 16), ticked ? 'Restart the clock (keep what’s ticked)' : 'Restart the clock'),
+        ticked ? h('button', { class: 'btn block', onClick: startOver }, 'Start over — clear what’s ticked') : null,
+        stale
+          ? h('button', { class: 'btn block', text: 'Keep the time', onClick: () => { A.lastAct = Date.now(); persist(); sh.close(); } })
+          : h('button', { class: 'btn block', onClick: () => { if (A.pausedAt) resumeClock(A); else pauseClock(A); persist(); sh.close(); paintClock(); } }, icon(A.pausedAt ? 'play' : 'pause', 16), A.pausedAt ? 'Resume the clock' : 'Pause the clock'),
+        h('button', { class: 'btn danger block', onClick: discard }, icon('trash', 16), 'Discard this session')));
+      async function startOver() {
+        sh.close();
+        if (!(await confirmDlg('Clear everything ticked and start fresh?', { ok: 'Start over', danger: true }))) return;
+        F.store.load().active = { src: A.src, plan: F.data.buildPlan(A.src, F.ui.today()), start: Date.now(), express: A.express, lastAct: Date.now(), pausedMs: 0, pausedAt: null };
+        F.timer.stopRest(); F.store.saveNow(); F.app.render();
+      }
+      async function discard() {
+        sh.close();
+        if (!(await confirmDlg(`Discard ${plan.title}?`, { ok: 'Discard', danger: true, sub: 'Nothing from it gets logged.' }))) return;
+        F.store.load().active = null; F.timer.stopRest(); F.store.saveNow(); location.hash = '#/';
+      }
+    }
+    // Left open for an hour with nothing logged (or since another day)? Ask before the clock inflates the minutes.
+    const idleMin = (Date.now() - (A.lastAct || A.start)) / 60000;
+    if (plan.date !== F.ui.today() || (!A.pausedAt && idleMin > 60)) setTimeout(() => { if (F.store.load().active === A && !document.querySelector('.sheet-back')) sessionMenu(true); }, 300);
     if (plan.desc) wrap.append(h('div', { class: 'callout mb small', text: plan.desc }));
     const ci = F.store.checkin(plan.date) || {};
     if (ci.knee >= 1 || ci.back >= 1) wrap.append(h('div', { class: 'callout amber mb small', text: `Adjusted for today's check-in (${[ci.knee >= 1 ? 'knees' : '', ci.back >= 1 ? 'back' : ''].filter(Boolean).join(' & ')}): gentler options are picked first. Stop anything sharp.` }));
@@ -290,12 +354,13 @@
     }
 
     // ---------- finish ----------
-    function anyDone() {
-      return plan.blocks.some((pb) => (pb.type === 'sets' && pb.items.some((it) => it.sets.some((z) => z.done))) || ((pb.type === 'list' || pb.type === 'flow') && pb.items.some((it) => it.done || (it.bubbles && it.bubbles.some(Boolean)))) || (pb.type === 'circuit' && pb.roundsDone) || (pb.type === 'timer' && pb.done));
-    }
+    const anyDone = () => F.activeProgress(A);
     function finish() {
       const P = F.store.load().profile;
-      const mins = Math.max(1, Math.round((Date.now() - A.start) / 60000));
+      const raw = Math.max(1, Math.round(F.activeMs(A) / 60000));
+      const est = plan.est || 30;
+      const tooLong = raw > Math.max(est * 2.5, est + 45);
+      const mins = tooLong ? est : raw;
       const minIn = F.ui.numIn(mins, { step: 1 });
       let rpe = null, knee = 0, back = 0;
       const checks = {};
@@ -305,6 +370,7 @@
       const sh = sheet(h('div', { class: 'stack' },
         h('h2', { text: 'Finish ' + plan.title }),
         !anyDone() ? h('div', { class: 'callout amber small', text: "Nothing is ticked yet — it'll still be logged as a session with the minutes below." }) : null,
+        tooLong ? h('div', { class: 'callout amber small', text: `The clock says ${F.ui.dur(raw)} — it looks like it was left running, so this uses the usual ${est} min. Change it if that’s wrong.` }) : null,
         h('label', { class: 'field' }, h('span', { text: 'Minutes' }), minIn),
         h('div', null, h('div', { class: 'eyebrow', text: 'How hard was it? (1 easy – 10 max)' }), F.ui.seg(rpeOpts, null, (v) => { rpe = v; })),
         P.injuries.knee ? h('div', null, h('div', { class: 'eyebrow', text: 'Knees during the session' }), F.ui.seg(painOpts, 0, (v) => { knee = v; })) : null,
