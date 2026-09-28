@@ -93,6 +93,7 @@ def check_ref(where, item):
 
 
 used_slots = set()
+slot_users = {}  # slot -> session ids that use it (to know which ones swap out on flare days)
 for s in prog["sessions"]:
     w = f"session {s['id']}"
     for k in ("name", "tags", "stat", "met", "est"):
@@ -120,6 +121,7 @@ for s in prog["sessions"]:
             check_ref(bw, it)
             if "slot" in it:
                 used_slots.add(it["slot"])
+                slot_users.setdefault(it["slot"], set()).add(s["id"])
             if b.get("type") == "flow" and not ("secs" in it or "reps" in it):
                 err(f"{bw}: flow item {it} needs secs or reps")
 
@@ -127,6 +129,7 @@ for day, items in prog["isoRotation"].items():
     for it in items:
         check_ref(f"isoRotation[{day}]", it)
         used_slots.add(it.get("slot"))
+        slot_users.setdefault(it.get("slot"), set()).add("holds")
 for day, sid in prog["mobilityRotation"].items():
     if sid not in SESS:
         err(f"mobilityRotation[{day}]: unknown session {sid}")
@@ -182,8 +185,15 @@ for phase in (1, 2, 3):
     for loc in ("home", "room", "gym", "hotelgym"):
         scenarios.append((f"{loc} p{phase}", kits[loc], phase, 0, 0))
 scenarios += [("bare room p1", kits["bare"], 1, 0, 0), ("home knee-flare", kits["home"], 1, 2, 0), ("home back-flare", kits["home"], 1, 0, 2)]
+def swaps_out(sid, joint):
+    """True when every session using this slot is replaced by a recovery session on a flare of `joint`."""
+    return all(joint in (SESS[u].get("flare") or {}) for u in slot_users.get(sid, ()))
+
+
 for sid in sorted(used_slots):
     for name, kit, phase, kf, bf in scenarios:
+        if (kf and swaps_out(sid, "knee")) or (bf and swaps_out(sid, "back")):
+            continue
         if not any(allowed(EX[c], kit, phase, kf, bf) for c in SLOTS[sid]["cands"] if c in EX):
             (err if name in ("home p1", "room p1") else warn)(f"slot {sid}: nothing available for {name}")
 

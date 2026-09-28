@@ -273,14 +273,14 @@
           it.slot && it.alts.length > 1 ? h('button', { class: 'btn xs', onClick: () => swapCircuit(bi, it) }, icon('swap', 14)) : null));
       }
       const grid = h('div', { class: 'roundgrid' });
-      const n = Math.max(pb.target, pb.roundsDone + (pb.roundsDone >= pb.target ? 1 : 0));
+      const n = Math.min(pb.max || 99, Math.max(pb.target, pb.roundsDone + (pb.roundsDone >= pb.target ? 1 : 0)));
       for (let k = 1; k <= n; k++) grid.append(h('button', { class: (k <= pb.roundsDone ? 'on' : '') + (k === pb.target ? ' target' : ''), text: String(k), onClick: () => {
         const was = pb.roundsDone;
         pb.roundsDone = k <= pb.roundsDone ? k - 1 : k;
         save(); refresh(bi);
         if (pb.roundsDone > was) { F.timer.sfx('pop'); F.ui.vibrate(20); if (pb.rest) F.timer.rest(pb.rest); }
       } }));
-      card.append(h('div', { class: 'row between mt-s' }, h('span', { class: 'small muted', text: `Tap each round as you finish it · target ${pb.target}` + (pb.lastRounds ? ` (last time ${pb.lastRounds} + 1)` : '') }), h('span', { class: 'num', style: { fontSize: '1.4rem', fontWeight: 700 }, text: pb.roundsDone + ' / ' + pb.target })));
+      card.append(h('div', { class: 'row between mt-s' }, h('span', { class: 'small muted', text: `Tap each round as you finish it · target ${pb.target}` + (pb.lastRounds ? ` (last time ${pb.lastRounds} + 1)` : '') + (pb.capped ? ` · Phase ${plan.phase} cap ${pb.max}` : '') }), h('span', { class: 'num', style: { fontSize: '1.4rem', fontWeight: 700 }, text: pb.roundsDone + ' / ' + pb.target })));
       card.append(grid);
       return card;
     }
@@ -404,7 +404,7 @@
     if (facts.length) wrap.append(h('div', { class: 'card' }, h('div', { class: 'grid3' }, facts.slice(0, 3).map(([v, l]) => h('div', { class: 'stat' }, h('b', { text: String(v) }), h('span', { text: l }))))));
 
     if ((rec.pain && (rec.pain.knee >= 2 || rec.pain.back >= 2))) {
-      wrap.append(h('div', { class: 'callout red' }, h('b', { text: 'Sharp pain logged. ' }), 'Tomorrow, check in honestly and Forge will swap in a recovery day. If the knee locks, catches or swells, or pain/numbness travels down a leg, contact your PT or doctor. ', h('a', { href: '#/settings/safety', text: 'Safety guide' })));
+      wrap.append(h('div', { class: 'callout red' }, h('b', { text: 'Sharp pain logged. ' }), 'Tomorrow, check in honestly and Forge will swap in a recovery day. A knee that stays locked (won’t straighten): don’t force it — see a doctor the same or next day. Catching, giving way, new swelling, or pain/numbness travelling down a leg: call your PT. ', h('a', { href: '#/settings/safety', text: 'Safety guide' })));
     }
 
     const W = C.thisWeek;

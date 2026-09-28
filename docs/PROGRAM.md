@@ -6,7 +6,7 @@ This is how Forge builds each day and week, written so a physical therapist can 
 
 1. **PT every day, and it counts.** The PT routine is a daily quest worth more XP than a walk. It builds the Armor stat and logs as exercise.
 2. **Knees:** meniscus / cartilage.
-   - Limit deep knee flexion under load: squats go to a box at a pain-free depth, and the box height comes down only while depth stays pain-free.
+   - Limit deep knee flexion under load: squats go to a box at a pain-free depth, with a default ceiling of about 90° of knee bend (thighs parallel) until the PT clears deeper. Hamstring curls stop around 90° too.
    - No twisting on a planted, bent knee: Krav footwork pivots on the ball of the foot.
    - No jumping or landing impact until cleared.
    - No deep kneeling or sitting on the heels.
@@ -25,7 +25,10 @@ This is how Forge builds each day and week, written so a physical therapist can 
    - 0–2/10: go.
    - 3–4/10: fine only if it settles within 24 hours; don't progress until it does.
    - 5+/10 or sharp: stop and swap.
-   - Red flags (knee locking, catching, giving way or swelling; saddle numbness; bladder or bowel changes; worsening leg weakness) mean stop and call the PT or doctor.
+   - A knee that locks and stays locked (won't fully straighten): don't force it and don't train; see a doctor the same or next day.
+   - Catching, giving way or new swelling: stop and call the PT.
+   - Saddle numbness, new bladder, bowel or sexual dysfunction, or sciatica down both legs: emergency care.
+   - Worsening leg weakness or foot drop: see a doctor promptly.
 
 ## Phases (Iron Return quest)
 
@@ -44,7 +47,7 @@ This is how Forge builds each day and week, written so a physical therapist can 
 | Wed | Strength B — legs and glutes, knee- and back-smart |
 | Thu | Norwegian 4×4 on the bike (4 × 4 min at 85–95% of max heart rate, 3 min easy between) + knee-kind yoga |
 | Fri | Strength C — back and arms, carries |
-| Sat | Murph builder: a "mile", rounds of 5 pull-ups / 10 push-ups / 15 box squats, a "mile". The first one each month is a Cindy benchmark instead. |
+| Sat | Murph builder: a "mile" (bike), rounds of 5 pull-ups / 10 push-ups / 15 box squats, another "mile". Phase 1 caps it at 10 rounds. The first one each month is a Cindy benchmark instead. |
 | Sun | Fast day: long walk + restorative yoga |
 
 **Every day:** the PT routine (by default clamshells, the side-lying leg series and hip lifts, and it's editable), two rotating isometric holds, 10 minutes of rolling and stretching, and a walk.
@@ -69,8 +72,8 @@ This is how Forge builds each day and week, written so a physical therapist can 
 ## Adapting
 
 - **Check-in "grumpy" (knee or back):** gentler variants are picked first, for example a Spanish squat instead of a TRX squat, or a single-leg bridge instead of step-ups.
-- **Check-in "flared":** the day becomes a recovery session, and anything not flagged fine for that joint is filtered out.
-  - Knee-calm day: upper body, gentle knee isometrics, easy blood flow.
+- **Check-in "flared":** strength, Krav, Murph, the 4×4, Zone 2 and walk-run all become a recovery session, and anything not flagged fine for that joint is filtered out (daily holds drop to quad sets).
+  - Knee-calm day: heel props (a check that the knee still straightens), quad sets, short-arc quads, upper body, easy blood flow.
   - Back-care day: McGill Big 3, a 15-minute walk, gentle mobility.
 - **Low energy:** optional sets are trimmed and "short on time" hides the optional blocks. Both earn full credit.
 - **Travel:**

@@ -198,9 +198,11 @@ F.data = (() => {
         pb.items.push(pi);
       }
       if (pb.type === 'circuit') {
+        const cap = b.maxByPhase && b.maxByPhase[String(c.phase)];
+        if (cap) { pb.max = cap; pb.capped = true; }
         const last = pb.progress ? lastRounds(tpl.id, date) : 0;
         pb.lastRounds = last;
-        pb.target = last ? Math.min(pb.max || 99, last + 1) : pb.rounds;
+        pb.target = Math.min(pb.max || 99, last ? last + 1 : pb.rounds);
         pb.roundsDone = 0;
       }
       if (pb.type === 'timer' && pb.timer && pb.timer.kind === 'amrap') pb.vals.rounds = null;

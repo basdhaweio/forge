@@ -35,12 +35,14 @@
     if (q.needs === 'thresholdLb' && !S.settings.goals.thresholdLb) body.append(h('div', { class: 'callout amber small mb' }, 'Set the target weight to track the carry steps — ', h('a', { href: '#/settings/goals', text: 'Settings → Goals' }), '. It stays on this device.'));
     const firstOpen = q.steps.findIndex((x) => !x.done);
     q.steps.forEach((st, i) => {
-      const right = st.check
-        ? h('button', { class: 'btn xs ' + (st.done ? 'ghost' : ''), text: st.done ? 'Undo' : 'Mark done', onClick: () => toggleCheck(q, st) })
-        : h('span', { class: 'small muted', text: st.done ? '' : F.game.metricText(st.metric, st.value || 0, st.goal) });
+      const right = st.locked
+        ? pill(`Phase ${st.phase}+`, 'purple')
+        : st.check
+          ? h('button', { class: 'btn xs ' + (st.done ? 'ghost' : ''), text: st.done ? 'Undo' : 'Mark done', onClick: () => toggleCheck(q, st) })
+          : h('span', { class: 'small muted', text: st.done ? '' : F.game.metricText(st.metric, st.value || 0, st.goal) });
       body.append(h('div', { class: 'step' + (st.done ? ' done' : '') },
         h('span', { class: 'sm' }, st.done ? h('span', { class: 'tick sm on' }, icon('check', 14)) : h('span', { class: 'tick sm', style: i === firstOpen ? { borderColor: 'var(--accent)' } : null })),
-        h('div', { class: 't' }, st.label, !st.check && !st.done && st.goal ? h('div', { class: 'mt-s' }, progress(Math.min(1, (st.value || 0) / st.goal))) : null),
+        h('div', { class: 't' }, st.label, !st.check && !st.done && !st.locked && st.goal ? h('div', { class: 'mt-s' }, progress(Math.min(1, (st.value || 0) / st.goal))) : null, st.locked ? h('small', { text: 'Unlocks with Phase ' + st.phase + ' (your PT’s OK in Iron Return).' }) : null),
         h('div', { class: 'stack', style: { gap: '4px', alignItems: 'flex-end' } }, h('span', { class: 'px', text: '+' + st.xp }), right)));
     });
     d.append(body);

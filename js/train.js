@@ -273,7 +273,7 @@
       wrap.append(sec);
     }
     wrap.append(h('h2', { class: 'mt', text: 'Rules the app follows' }), h('ul', { class: 'cues small' },
-      h('li', { text: 'Squats go to a box at pain-free depth; deep loaded knee flexion, twisting on a planted knee, jumping and deep kneeling are avoided.' }),
+      h('li', { text: 'Squats go to a box at pain-free depth, no deeper than about 90° of knee bend until cleared; deep loaded knee flexion, twisting on a planted knee, jumping and deep kneeling are avoided.' }),
       h('li', { text: 'No loaded spinal flexion (crunches, sit-ups, twists); neutral-spine hinges from an elevated start; chest-supported rows; McGill Big 3 core.' }),
       h('li', { text: 'Progression: reps to the top of the range, then +5 lb (upper) / +10 lb (lower). Holds: best + 5 s.' }),
       h('li', { text: 'Barbell lifts unlock in phases only after the user confirms PT/doctor clearance.' }),

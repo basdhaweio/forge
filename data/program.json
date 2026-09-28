@@ -68,11 +68,11 @@
   },
 
   "slots": {
-    "squat": {"name": "Squat pattern", "cands": ["back_squat", "front_squat", "bb_box_squat", "landmine_squat", "leg_press", "goblet_box_squat", "trx_squat", "box_squat_bw", "spanish_squat", "wall_sit_high"]},
+    "squat": {"name": "Squat pattern", "cands": ["back_squat", "front_squat", "bb_box_squat", "landmine_squat", "leg_press", "goblet_box_squat", "box_squat_bw", "trx_squat", "spanish_squat", "wall_sit_high"]},
     "hinge": {"name": "Hinge pattern", "cands": ["conv_deadlift", "sumo_deadlift", "trapbar_dl_high", "bb_rdl", "db_rdl", "kb_deadlift_blocks", "cable_pull_through", "band_pull_through", "sl_rdl", "hip_hinge_drill"]},
     "glute": {"name": "Glutes", "cands": ["hip_thrust", "single_leg_bridge", "glute_bridge"]},
     "single_leg": {"name": "Single leg", "cands": ["bulgarian_split_squat", "reverse_lunge_short", "sl_box_squat", "step_up_low", "split_squat_partial", "trx_split_squat", "step_down_lateral", "single_leg_bridge"]},
-    "quad": {"name": "Knee armor", "cands": ["spanish_squat", "tke_band", "leg_extension_partial", "wall_sit_high", "straight_leg_raise"]},
+    "quad": {"name": "Knee armor", "cands": ["tke_band", "spanish_squat", "leg_extension_partial", "short_arc_quad", "wall_sit_high", "straight_leg_raise"]},
     "hamstring": {"name": "Hamstrings", "cands": ["nordic_curl", "machine_leg_curl", "stabball_ham_curl", "trx_ham_curl", "slider_ham_curl", "sl_rdl"]},
     "calves": {"name": "Calves & shins", "cands": ["calf_raise", "tib_raise"]},
     "h_push": {"name": "Press", "cands": ["bb_bench", "db_bench", "db_floor_press", "machine_chest_press", "trx_chest_press", "pushup", "band_chest_press", "pushup_incline"]},
@@ -91,7 +91,7 @@
     "core_rot": {"name": "Abs: anti-rotation", "cands": ["pallof_press", "half_kneeling_chop", "side_plank", "bird_dog"]},
     "core_abs": {"name": "Abs", "cands": ["hanging_knee_raise", "reverse_crunch", "mcgill_curl_up", "dead_bug"]},
     "carry": {"name": "Carry", "cands": ["bearhug_carry", "farmer_carry", "suitcase_carry", "goblet_carry", "backpack_carry"]},
-    "iso_quad": {"name": "Quad hold", "cands": ["wall_sit", "spanish_squat", "wall_sit_high"]},
+    "iso_quad": {"name": "Quad hold", "cands": ["wall_sit", "spanish_squat", "wall_sit_high", "quad_set"]},
     "iso_front": {"name": "Front core hold", "cands": ["plank", "bear_plank", "dead_bug_hold", "hollow_hold"]},
     "iso_side": {"name": "Side core hold", "cands": ["side_plank"]},
     "iso_hang": {"name": "Hang / grip hold", "cands": ["dead_hang", "farmer_hold", "towel_hang"]},
@@ -116,7 +116,7 @@
     {"id": "strB", "name": "Strength B", "sub": "Legs & glutes · knee- and back-smart", "icon": "🦵", "group": "Strength", "tags": ["lift", "lower"], "stat": "STR", "met": 5.0, "est": 50,
      "flare": {"knee": "flare_knee", "back": "flare_back"},
      "blocks": [
-       {"name": "Warm-up", "type": "list", "core": true, "items": [{"ex": "bike", "dose": "5 min easy", "alt": "leg_swings"}, {"ex": "glute_bridge", "dose": "10"}, {"ex": "monster_walk", "dose": "10 steps each way", "alt": "clamshell"}, {"ex": "hip_hinge_drill", "dose": "8"}]},
+       {"name": "Warm-up", "type": "list", "core": true, "items": [{"ex": "bike", "dose": "5 min easy", "alt": "leg_swings"}, {"ex": "glute_bridge", "dose": "10"}, {"ex": "monster_walk", "dose": "10 steps each way", "alt": "clamshell"}, {"ex": "hip_hinge_drill", "dose": "8"}, {"ex": "sl_balance", "dose": "30 s / side"}]},
        {"name": "Main lifts", "type": "sets", "core": true, "items": [{"slot": "squat", "sets": 3, "reps": "8-12", "hold": "30-45", "rest": 90}, {"slot": "hinge", "sets": 3, "reps": "8-12", "rest": 120}]},
        {"name": "Glutes & single leg", "type": "sets", "items": [{"slot": "glute", "sets": 3, "reps": "10-15", "rest": 60, "focus": "glutes"}, {"slot": "single_leg", "sets": 2, "reps": "8-10", "rest": 60}]},
        {"name": "Knee armor", "type": "sets", "items": [{"slot": "quad", "sets": 2, "reps": "12-15", "hold": "30-45", "rest": 45}, {"slot": "hamstring", "sets": 2, "reps": "8-12", "rest": 60}, {"slot": "calves", "sets": 2, "reps": "12-20", "rest": 45}]},
@@ -136,11 +136,11 @@
        {"name": "Warm-up", "type": "list", "core": true, "items": [{"ex": "arm_circles", "dose": "30 s"}, {"ex": "trx_squat", "dose": "10 easy"}, {"ex": "trx_y_raise", "dose": "8 light"}]},
        {"name": "Big moves", "type": "sets", "core": true, "items": [{"ex": "trx_row", "sets": 3, "reps": "10-15", "rest": 45}, {"ex": "trx_chest_press", "sets": 3, "reps": "10-15", "rest": 45}, {"ex": "trx_squat", "sets": 3, "reps": "10-15", "rest": 45}, {"ex": "trx_ham_curl", "sets": 2, "reps": "8-12", "rest": 45}]},
        {"name": "Arms & shoulders", "type": "sets", "items": [{"ex": "trx_curl", "sets": 3, "reps": "10-15", "rest": 30, "focus": "arms"}, {"ex": "trx_triceps_ext", "sets": 3, "reps": "10-15", "rest": 30, "focus": "arms"}, {"ex": "trx_face_pull", "sets": 2, "reps": "12-15", "rest": 30}]},
-       {"name": "Abs", "type": "sets", "items": [{"ex": "trx_fallout", "sets": 3, "reps": "6-10", "rest": 45}, {"ex": "side_plank", "sets": 2, "hold": "20-40", "rest": 30}]}
+       {"name": "Abs", "type": "sets", "items": [{"ex": "trx_fallout", "sets": 3, "reps": "6-10", "rest": 45, "alt": "dead_bug"}, {"ex": "side_plank", "sets": 2, "hold": "20-40", "rest": 30}]}
      ]},
 
     {"id": "krav_solo", "name": "Krav Maga", "sub": "Footwork · combatives · conditioning", "icon": "🥋", "group": "Krav Maga", "tags": ["krav"], "stat": "AGI", "met": 7.0, "est": 40,
-     "flare": {"knee": "krav_static", "back": "krav_static"},
+     "flare": {"knee": "krav_static", "back": "flare_back"},
      "blocks": [
        {"name": "Warm-up", "type": "list", "core": true, "items": [{"ex": "c_step_jack", "dose": "30"}, {"ex": "arm_circles", "dose": "30 s"}, {"ex": "hip_cars", "dose": "3 / side"}, {"ex": "leg_swings", "dose": "10 / side"}, {"ex": "k_stance", "dose": "check stance & guard"}]},
        {"name": "Footwork", "type": "timer", "core": true, "timer": {"kind": "intervals", "work": 120, "rest": 30, "rounds": 3, "workLabels": ["Forward & back", "Lateral", "Angles & circling"], "restLabel": "Shake out"}, "items": [{"ex": "k_footwork_fb"}, {"ex": "k_footwork_lat"}, {"ex": "k_footwork_angles"}]},
@@ -156,26 +156,26 @@
      ]},
 
     {"id": "n4x4", "name": "Norwegian 4×4", "sub": "Heart-health intervals", "icon": "❤️", "group": "Cardio", "tags": ["n4x4", "cardio"], "stat": "END", "met": 7.5, "est": 38,
-     "requires": ["bike|elliptical|rower|treadmill"], "alt": "n4x4_room",
-     "desc": "Four 4-minute efforts at 85–95% of max heart rate with 3 easy minutes between. One of the best-studied workouts for VO₂max and heart health.",
+     "requires": ["bike|elliptical|rower|treadmill"], "alt": "n4x4_room", "flare": {"knee": "flare_knee", "back": "flare_back"},
+     "desc": "Four 4-minute efforts at 85–95% of max heart rate with 3 easy minutes between. One of the best-studied workouts for VO₂max and heart health. On the bike, stay seated and push cadence rather than grinding heavy resistance.",
      "blocks": [
        {"name": "4×4 intervals", "type": "timer", "core": true, "timer": {"kind": "intervals", "warm": 600, "work": 240, "rest": 180, "rounds": 4, "cool": 300, "workLabel": "HARD — 85–95% max HR", "restLabel": "Easy — about 70% max HR", "warmLabel": "Warm-up — build to moderate", "coolLabel": "Cool-down — easy", "hr": true}, "items": [{"ex": "bike"}], "log": ["dist", "hr"]}
      ]},
-    {"id": "n4x4_room", "name": "No-impact 4×4", "sub": "Hotel-room heart intervals", "icon": "❤️", "group": "Cardio", "tags": ["n4x4", "cardio"], "stat": "END", "met": 7.0, "est": 35,
+    {"id": "n4x4_room", "name": "No-impact 4×4", "sub": "Hotel-room heart intervals", "icon": "❤️", "group": "Cardio", "tags": ["n4x4", "cardio"], "stat": "END", "met": 7.0, "est": 35, "flare": {"knee": "flare_knee", "back": "flare_back"},
      "desc": "Same heart-rate target, no machine: rotate punch sprints, step jacks, mountain climbers and incline burpees through each 4-minute effort.",
      "blocks": [
        {"name": "4×4 intervals", "type": "timer", "core": true, "timer": {"kind": "intervals", "warm": 300, "work": 240, "rest": 180, "rounds": 4, "cool": 180, "workLabel": "HARD — switch every 30 s: punch sprint · step jacks · mountain climbers · incline burpees", "restLabel": "Easy — march in place", "warmLabel": "Warm-up — march, arm circles, light shadowboxing", "coolLabel": "Cool-down — walk it off", "hr": true}, "items": [{"ex": "c_punch_sprint"}, {"ex": "c_step_jack"}, {"ex": "c_mountain_climber"}, {"ex": "c_incline_burpee"}], "log": ["hr"]}
      ]},
     {"id": "z2", "name": "Zone 2 ride", "sub": "Easy, conversational, long", "icon": "🚴", "group": "Cardio", "tags": ["z2", "cardio"], "stat": "END", "met": 6.0, "est": 40,
-     "requires": ["bike|elliptical|treadmill|rower"], "alt": "explorer_walk",
+     "requires": ["bike|elliptical|treadmill|rower"], "alt": "explorer_walk", "flare": {"knee": "flare_knee", "back": "flare_back"},
      "blocks": [
        {"name": "Steady", "type": "timer", "core": true, "timer": {"kind": "steady", "mins": 40, "label": "Zone 2 — 60–70% max HR, nose-breathing pace", "hrZone": [0.6, 0.7]}, "items": [{"ex": "bike"}], "log": ["dist", "hr"]}
      ]},
-    {"id": "explorer_walk", "name": "Long walk", "sub": "45 min brisk — go explore", "icon": "🚶", "group": "Cardio", "tags": ["z2", "walk", "cardio"], "stat": "END", "met": 4.3, "est": 45,
+    {"id": "explorer_walk", "name": "Long walk", "sub": "45 min brisk — go explore", "icon": "🚶", "group": "Cardio", "tags": ["z2", "walk", "cardio"], "stat": "END", "met": 4.3, "est": 45, "flare": {"knee": "flare_knee"},
      "blocks": [
        {"name": "Walk", "type": "timer", "core": true, "timer": {"kind": "steady", "mins": 45, "label": "Brisk — breathing a little harder, can still talk"}, "items": [{"ex": "walk"}], "log": ["dist", "steps"]}
      ]},
-    {"id": "walk_run", "name": "Walk-run", "sub": "Run-return intervals", "icon": "🏃", "group": "Cardio", "tags": ["run", "cardio"], "stat": "END", "met": 6.5, "est": 30, "gate": "run",
+    {"id": "walk_run", "name": "Walk-run", "sub": "Run-return intervals", "icon": "🏃", "group": "Cardio", "tags": ["run", "cardio"], "stat": "END", "met": 6.5, "est": 30, "gate": "run", "flare": {"knee": "flare_knee", "back": "flare_back"},
      "blocks": [
        {"name": "Intervals", "type": "timer", "core": true, "timer": {"kind": "intervals", "warm": 300, "work": 60, "rest": 90, "rounds": 8, "cool": 300, "workLabel": "Run — easy, short quick steps", "restLabel": "Walk", "warmLabel": "Brisk walk", "coolLabel": "Walk"}, "items": [{"ex": "walk_run"}], "log": ["dist"]}
      ]},
@@ -217,33 +217,33 @@
 
     {"id": "murph_builder", "name": "Murph builder", "sub": "Mile · rounds of 5 · 10 · 15 · mile", "icon": "🎖️", "group": "Murph", "tags": ["murph", "cardio"], "stat": "END", "met": 8.0, "est": 40,
      "flare": {"knee": "flare_knee", "back": "flare_back"},
-     "desc": "Murph is 1 mile, 100 pull-ups, 200 push-ups, 300 squats, 1 mile. Build it in rounds of 5 pull · 10 push · 15 squat — 20 rounds is the full volume. Add a round or two each time.",
+     "desc": "Murph is 1 mile, 100 pull-ups, 200 push-ups, 300 squats, 1 mile. Build it in rounds of 5 pull · 10 push · 15 squat — 20 rounds is the full volume. Add a round each time; Phase 1 caps at 10 rounds to spare the knees.",
      "blocks": [
-       {"name": "Mile #1", "type": "timer", "timer": {"kind": "steady", "mins": 8, "label": "Bike ~2 mi hard (run it once you're cleared)", "altLabel": "Brisk walk, stairs or step-ups ~8 min"}, "items": [{"ex": "bike"}], "log": ["dist"]},
-       {"name": "Rounds: 5 pull · 10 push · 15 squat", "type": "circuit", "core": true, "rounds": 8, "progress": true, "max": 20, "rest": 30, "items": [{"slot": "murph_pull", "reps": "5"}, {"slot": "murph_push", "reps": "10"}, {"slot": "murph_squat", "reps": "15"}]},
-       {"name": "Mile #2", "type": "timer", "timer": {"kind": "steady", "mins": 8, "label": "Bike ~2 mi hard", "altLabel": "Brisk walk, stairs or step-ups ~8 min"}, "items": [{"ex": "bike"}], "log": ["dist"]}
+       {"name": "Mile #1", "type": "timer", "timer": {"kind": "steady", "mins": 8, "label": "Bike ~2 mi hard (run it once you're cleared)", "altLabel": "Brisk walk ~8 min"}, "items": [{"ex": "bike"}], "log": ["dist"]},
+       {"name": "Rounds: 5 pull · 10 push · 15 squat", "type": "circuit", "core": true, "rounds": 6, "progress": true, "max": 20, "maxByPhase": {"1": 10}, "rest": 30, "items": [{"slot": "murph_pull", "reps": "5"}, {"slot": "murph_push", "reps": "10"}, {"slot": "murph_squat", "reps": "15"}]},
+       {"name": "Mile #2", "type": "timer", "timer": {"kind": "steady", "mins": 8, "label": "Bike ~2 mi hard", "altLabel": "Brisk walk ~8 min"}, "items": [{"ex": "bike"}], "log": ["dist"]}
      ]},
     {"id": "cindy", "name": "Cindy", "sub": "Benchmark · 20-min AMRAP", "icon": "🎯", "group": "Murph", "tags": ["murph", "benchmark"], "stat": "END", "met": 8.0, "est": 25,
      "flare": {"knee": "flare_knee", "back": "flare_back"},
-     "desc": "As many rounds as possible in 20 minutes of 5 pull · 10 push · 15 squat. Test it once a month — the rounds number is your Murph fitness in one figure.",
+     "desc": "As many rounds as possible in 20 minutes of 5 pull · 10 push · 15 squat. Test it once a month — the rounds number is your Murph fitness in one figure. In Phase 1, stop at 10 rounds even if time remains.",
      "blocks": [
        {"name": "Warm-up", "type": "list", "core": true, "items": [{"ex": "arm_circles", "dose": "30 s"}, {"ex": "c_step_jack", "dose": "30"}, {"ex": "box_squat_bw", "dose": "10"}, {"ex": "pushup_incline", "dose": "8"}]},
        {"name": "AMRAP 20", "type": "timer", "core": true, "timer": {"kind": "amrap", "mins": 20, "label": "5 pull · 10 push · 15 squat — as many rounds as possible"}, "items": [{"slot": "murph_pull", "reps": "5"}, {"slot": "murph_push", "reps": "10"}, {"slot": "murph_squat", "reps": "15"}], "log": ["rounds"]}
      ]},
     {"id": "murph", "name": "Murph", "sub": "The whole thing", "icon": "🇺🇸", "group": "Murph", "tags": ["murph", "murphfull", "benchmark"], "stat": "END", "met": 8.0, "est": 60,
      "flare": {"knee": "flare_knee", "back": "flare_back"},
-     "desc": "1 mile · 100 pull-ups · 200 push-ups · 300 squats · 1 mile. Partition however you like. Rx is running both miles in a 20 lb vest.",
-     "finishChecks": [{"id": "rx", "label": "Rx — ran both miles with a 20 lb vest"}],
+     "desc": "1 mile · 100 pull-ups · 200 push-ups · 300 squats · 1 mile. Partition however you like. Rx is the whole workout in a 20 lb vest with both miles run — only after your running clearance.",
+     "finishChecks": [{"id": "rx", "label": "Rx — the whole workout in a 20 lb vest, both miles run"}],
      "blocks": [
-       {"name": "Mile #1", "type": "timer", "timer": {"kind": "stopwatch", "label": "Mile #1 — run, or bike ~2 mi"}, "items": [{"ex": "bike"}], "log": ["dist"]},
+       {"name": "Mile #1", "type": "timer", "timer": {"kind": "stopwatch", "label": "Mile #1 — bike ~2 mi (run only once cleared)"}, "items": [{"ex": "bike"}], "log": ["dist"]},
        {"name": "20 rounds: 5 · 10 · 15", "type": "circuit", "core": true, "rounds": 20, "rest": 0, "items": [{"slot": "murph_pull", "reps": "5"}, {"slot": "murph_push", "reps": "10"}, {"slot": "murph_squat", "reps": "15"}]},
-       {"name": "Mile #2", "type": "timer", "timer": {"kind": "stopwatch", "label": "Mile #2"}, "items": [{"ex": "bike"}], "log": ["dist"]}
+       {"name": "Mile #2", "type": "timer", "timer": {"kind": "stopwatch", "label": "Mile #2 — bike ~2 mi (run only once cleared)"}, "items": [{"ex": "bike"}], "log": ["dist"]}
      ]},
 
     {"id": "flare_knee", "name": "Knee-calm day", "sub": "Upper body · pain-free isometrics · blood flow", "icon": "🧊", "group": "Recovery", "tags": ["recovery"], "stat": "ARMOR", "met": 3.5, "est": 30,
      "desc": "Knees are flared. Keep moving without loading them: upper body, gentle pain-free knee work, and easy blood flow. Full streak credit.",
      "blocks": [
-       {"name": "Gentle knee work — pain-free only", "type": "list", "items": [{"ex": "quad_set", "dose": "10 × 5 s / side"}, {"ex": "straight_leg_raise", "dose": "2 × 10 / side"}, {"ex": "adductor_squeeze", "dose": "10 × 5 s"}, {"ex": "glute_bridge", "dose": "2 × 10"}]},
+       {"name": "Gentle knee work — pain-free only", "type": "list", "items": [{"ex": "heel_prop", "dose": "1–2 min / side — check the knee still straightens"}, {"ex": "quad_set", "dose": "10 × 5 s / side"}, {"ex": "short_arc_quad", "dose": "2 × 10 / side"}, {"ex": "straight_leg_raise", "dose": "2 × 10 / side"}, {"ex": "adductor_squeeze", "dose": "10 × 5 s"}, {"ex": "glute_bridge", "dose": "2 × 10"}]},
        {"name": "Upper body", "type": "sets", "core": true, "items": [{"slot": "h_pull", "sets": 3, "reps": "10-12", "rest": 60}, {"slot": "h_push", "sets": 3, "reps": "8-12", "rest": 60}, {"slot": "biceps_a", "sets": 2, "reps": "10-15", "rest": 45}, {"slot": "triceps_a", "sets": 2, "reps": "10-15", "rest": 45}]},
        {"name": "Abs", "type": "sets", "items": [{"ex": "dead_bug", "sets": 2, "reps": "8-10", "rest": 30}, {"ex": "side_plank", "sets": 2, "hold": "20-40", "rest": 30}]},
        {"name": "Blood flow", "type": "list", "items": [{"ex": "bike", "dose": "10 min very easy — only if pain-free, seat a touch high", "alt": "walk"}]}
@@ -253,7 +253,7 @@
      "blocks": [
        {"name": "McGill Big 3", "type": "sets", "core": true, "items": [{"ex": "mcgill_curl_up", "sets": 3, "reps": "5-6", "rest": 20}, {"ex": "side_plank", "sets": 3, "hold": "10-20", "rest": 20}, {"ex": "bird_dog", "sets": 3, "reps": "5-6", "rest": 20}]},
        {"name": "Walk", "type": "timer", "core": true, "timer": {"kind": "steady", "mins": 15, "label": "Easy walk — upright, arms swinging"}, "items": [{"ex": "walk"}]},
-       {"name": "Gentle mobility", "type": "flow", "items": [{"ex": "cat_cow", "reps": "8 slow"}, {"ex": "sphinx", "secs": 60}, {"ex": "hamstring_strap", "secs": 30}, {"ex": "y_legs_up_wall", "secs": 120}]}
+       {"name": "Gentle mobility", "type": "flow", "items": [{"ex": "cat_cow", "reps": "8 slow"}, {"ex": "sphinx", "secs": 60}, {"ex": "y_legs_up_wall", "secs": 120}]}
      ]},
 
     {"id": "pt", "name": "PT routine", "sub": "Your physical-therapy exercises", "icon": "🛡️", "group": "Daily", "tags": ["pt"], "stat": "ARMOR", "met": 3.0, "est": 15, "dynamic": "pt"},
@@ -385,7 +385,7 @@
        {"id": "pt12", "label": "Foundation: PT on 12 days", "metric": "ptDays", "gte": 12, "xp": 150},
        {"id": "s8", "label": "8 strength sessions", "metric": "count:lift", "gte": 8, "xp": 150},
        {"id": "sp45", "label": "Side plank 45 s", "metric": "holdBest:side_plank", "gte": 45, "xp": 100},
-       {"id": "goblet", "label": "Goblet box squat 3×12 to a parallel box with pain ≤ 2/10", "check": true, "xp": 150},
+       {"id": "goblet", "label": "Goblet box squat 3×12 to the box height your PT sets, pain ≤ 2/10", "check": true, "xp": 150},
        {"id": "hinge", "label": "Kettlebell deadlift from blocks with a neutral spine, pain-free", "check": true, "xp": 150},
        {"id": "clear2", "label": "PT/doctor OK to start barbell work — unlocks Phase 2", "check": true, "xp": 300, "unlock": "phase2"},
        {"id": "p2s12", "label": "12 strength sessions in Phase 2+", "metric": "countPhase:lift:2", "gte": 12, "xp": 250},
@@ -399,10 +399,10 @@
      "steps": [
        {"id": "f50", "label": "Farmer carry: 50% of target (both hands) for 40 s", "metric": "carryPct:farmer_carry:40", "gte": 50, "xp": 150},
        {"id": "g25", "label": "Goblet or bear-hug carry: 25% of target for 30 s", "metric": "carryPctAny:goblet_carry,bearhug_carry:30", "gte": 25, "xp": 150},
-       {"id": "f100", "label": "Farmer carry: 100% of target (both hands) for 30 s", "metric": "carryPct:farmer_carry:30", "gte": 100, "xp": 300},
-       {"id": "b50", "label": "Bear-hug carry: 50% of target for 30 s", "metric": "carryPctAny:bearhug_carry,zercher_carry:30", "gte": 50, "xp": 300},
-       {"id": "b75", "label": "Bear-hug carry: 75% of target for 20 s", "metric": "carryPctAny:bearhug_carry,zercher_carry:20", "gte": 75, "xp": 400},
-       {"id": "done", "label": "Carried them over the threshold", "check": true, "xp": 1000}
+       {"id": "f100", "phase": 2, "label": "Farmer carry: 100% of target (both hands) for 30 s", "metric": "carryPct:farmer_carry:30", "gte": 100, "xp": 300},
+       {"id": "b50", "phase": 2, "label": "Bear-hug carry: 50% of target for 30 s", "metric": "carryPctAny:bearhug_carry,zercher_carry:30", "gte": 50, "xp": 300},
+       {"id": "b75", "phase": 2, "label": "Bear-hug carry: 75% of target for 20 s", "metric": "carryPctAny:bearhug_carry,zercher_carry:20", "gte": 75, "xp": 400},
+       {"id": "done", "phase": 2, "label": "Carried them over the threshold", "check": true, "xp": 1000}
      ]},
     {"id": "slopes", "name": "Slopes Ready", "icon": "⛷️", "desc": "Quads, balance and an engine for a ski day — built knee-first.",
      "steps": [
@@ -434,7 +434,7 @@
        {"id": "r15", "label": "Murph builder: 15 rounds", "metric": "murphRounds", "gte": 15, "xp": 300},
        {"id": "r20", "label": "Murph builder: all 20 rounds", "metric": "murphRounds", "gte": 20, "xp": 400},
        {"id": "full", "label": "Complete a Murph (any scaling)", "metric": "count:murphfull", "gte": 1, "xp": 700},
-       {"id": "rx", "label": "Murph Rx — run both miles in a 20 lb vest", "metric": "murphRx", "gte": 1, "xp": 1500}
+       {"id": "rx", "label": "Murph Rx — the whole thing in a 20 lb vest, both miles run (after running clearance)", "metric": "murphRx", "gte": 1, "xp": 1500}
      ]},
     {"id": "ocr", "name": "OCR Ready", "icon": "🧗", "desc": "Grip, pulling, carrying and an engine — so you could, if you ever wanted to.",
      "steps": [
@@ -444,6 +444,7 @@
        {"id": "crawl", "label": "Bear crawl 60 s", "metric": "holdBest:c_bear_crawl", "gte": 60, "xp": 100},
        {"id": "5k", "label": "Run a 5K", "metric": "distBest:run", "gte": 3.1, "xp": 200},
        {"id": "pu10", "label": "10 strict pull-ups in one set", "metric": "repsBest:pullup", "gte": 10, "xp": 400},
+       {"id": "clear", "label": "PT/doctor OK for an obstacle race", "check": true, "xp": 300},
        {"id": "race", "label": "Log an obstacle race", "metric": "count:ocr", "gte": 1, "xp": 800}
      ]},
     {"id": "photo", "name": "Photo Day", "icon": "📸", "desc": "The point is to feel proud. Targets are yours — set them in Settings → Goals.",
@@ -460,18 +461,19 @@
   "fastingStages": [
     {"h": 0, "name": "Fed", "icon": "🍽️", "desc": "Digesting your last meal. Blood sugar and insulin are up and your body is storing energy."},
     {"h": 4, "name": "Early fast", "icon": "🌗", "desc": "Insulin is falling. Your liver releases stored glycogen to keep blood sugar steady, and fat-burning starts to ramp up."},
-    {"h": 12, "name": "Metabolic switch", "icon": "🔄", "desc": "Liver glycogen is running low (sooner if you trained). Fat becomes the main fuel and the liver starts making ketones."},
-    {"h": 18, "name": "Ketosis", "icon": "🔥", "desc": "Ketones are measurably rising. Hunger tends to come in waves around your usual mealtimes, then pass. Growth hormone rises, which helps protect muscle."},
-    {"h": 24, "name": "Deep fast", "icon": "🌊", "desc": "Glycogen is largely spent and you're running on fat and ketones. Cellular clean-up (autophagy) is thought to ramp up — the strongest evidence is from animal studies, and the human timing isn't pinned down."},
+    {"h": 12, "name": "Metabolic switch", "icon": "🔄", "desc": "Somewhere between about 12 and 36 hours (sooner if you trained or ate low-carb), liver glycogen runs low, fat becomes the main fuel and the liver starts making ketones."},
+    {"h": 18, "name": "Ketones rising", "icon": "🔥", "desc": "Ketone levels are climbing (full ketosis often arrives nearer 24 hours or later). Hunger tends to come in waves around your usual mealtimes, then pass. Growth hormone tends to rise during a fast, which may help spare muscle."},
+    {"h": 24, "name": "Deep fast", "icon": "🌊", "desc": "Liver glycogen is largely spent (muscle keeps its own stores), so you're running mostly on fat with ketones climbing; the brain still runs mainly on glucose your liver makes. Cellular clean-up (autophagy) is thought to ramp up — the strongest evidence is from animal studies, and the human timing isn't pinned down."},
     {"h": 36, "name": "Top of your range", "icon": "🏁", "desc": "You're at the top of the 24–36 h range. Break the fast with a protein-forward, normal-sized meal."}
   ],
   "fastingTips": [
-    "Water, black coffee, plain tea and electrolytes (a pinch of salt, potassium, magnesium) are all fine.",
+    "Water, black coffee, plain tea and electrolytes (a pinch of salt, magnesium) are fine. Check with your doctor before adding potassium if you take blood-pressure medication or have kidney disease.",
+    "Skip ibuprofen and naproxen on an empty stomach — they're hard on the gut lining.",
     "Keep training easy — walk, PT, mobility. Save heavy lifting and 4×4s for fed days.",
     "Stand up slowly. Brief light-headedness is common; real dizziness, palpitations or confusion mean end the fast and eat.",
     "Break it with protein and a normal-sized meal, not a feast."
   ],
-  "fastingCaution": "Skip fasting if you take diabetes medication (especially insulin or sulfonylureas), are underweight, are unwell, or have a history of disordered eating — check with your doctor first.",
+  "fastingCaution": "Skip fasting if you take diabetes medication (especially insulin or sulfonylureas), blood-pressure medication or diuretics, have kidney disease or gout, are underweight or unwell, or have a history of disordered eating — check with your doctor first.",
 
   "foods": [
     {"id": "shake", "name": "Protein shake (1 scoop)", "p": 25, "sug": 1, "kcal": 120},
@@ -525,13 +527,13 @@
   "safety": {
     "pain": [
       {"level": "0–2 / 10", "tone": "green", "text": "Go. Normal training discomfort."},
-      {"level": "3–4 / 10", "tone": "amber", "text": "OK if it settles within 24 hours — but don't add load or range until it does."},
+      {"level": "3–4 / 10", "tone": "amber", "text": "OK if it settles within 24 hours and there's no extra knee swelling the next morning — but don't add load or range until it does."},
       {"level": "5+ / 10 or sharp", "tone": "red", "text": "Stop that exercise. Swap it, or finish with a recovery session."}
     ],
     "flags": [
-      {"title": "Knee", "items": ["Locking (stuck, won't straighten), catching, giving way, or new swelling — stop and call your PT or doctor. With a bucket-handle tear these can mean the torn piece has shifted."]},
-      {"title": "Lower back", "items": ["Numbness in the groin or inner thighs, new bladder or bowel changes, or leg weakness that's getting worse — get emergency care.", "Pain, numbness or tingling travelling further down a leg — stop and check in with your PT or doctor."]},
-      {"title": "Heart", "items": ["Chest pain or pressure, unusual breathlessness, palpitations or feeling faint during cardio (especially 4×4s) — stop and get checked."]}
+      {"title": "Knee", "items": ["A knee that locks and stays locked (won't fully straighten) — don't force it and don't train on it. See a doctor or orthopedist the same or next day: with a bucket-handle tear it can mean the torn piece has flipped, and that's time-sensitive.", "Catching, giving way, or new swelling — stop the session and call your PT."]},
+      {"title": "Lower back", "items": ["Numbness in the saddle area (genitals, anus, buttocks, inner thighs), new trouble starting or controlling urine, bowel leakage, new sexual dysfunction, or sciatica down both legs — go to emergency care now.", "Leg weakness that's getting worse, or foot drop (the front of the foot slapping or catching as you walk) — see a doctor promptly.", "Pain, numbness or tingling travelling further down a leg — stop and check in with your PT or doctor."]},
+      {"title": "Heart", "items": ["Chest pain or pressure, unusual breathlessness, palpitations or feeling faint during cardio (especially 4×4s) — stop. If chest pain doesn't settle within a few minutes of stopping, call emergency services."]}
     ],
     "general": "Forge is a training log and planner, not medical advice. Show your PT the plan — every exercise can be swapped, and the injury filters are a starting point, not a clearance."
   }

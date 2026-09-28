@@ -293,14 +293,15 @@ F.game = (() => {
     C.quests = P.quests.filter((q) => S.settings.quests[q.id] !== false).map((q) => {
       const steps = q.steps.map((st) => {
         const key = q.id + '.' + st.id;
+        const locked = !!st.phase && (S.settings.phase || 1) < st.phase;  // e.g. heavy carries wait for Phase 2
         let done, value = null, goal = null;
-        if (st.check) done = !!S.checks[key];
+        if (st.check) done = !locked && !!S.checks[key];
         else {
           goal = st.gte ?? S.settings.goals[st.gteSetting];
           value = C.metric(st.metric);
-          done = goal !== null && goal !== undefined && goal > 0 && value >= goal;
+          done = !locked && goal !== null && goal !== undefined && goal > 0 && value >= goal;
         }
-        return Object.assign({}, st, { key, done, value, goal });
+        return Object.assign({}, st, { key, done, value, goal, locked });
       });
       const n = steps.filter((x) => x.done).length;
       return Object.assign({}, q, { steps, n, complete: n === steps.length, pct: n / steps.length });
