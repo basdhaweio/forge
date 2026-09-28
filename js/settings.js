@@ -65,7 +65,8 @@
         h('div', { class: 'card mt' }, h('label', { class: 'field' }, h('span', { text: 'Name (optional)' }), name),
           h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Units' }), seg([{ v: 'imperial', label: 'lb · in · mi' }, { v: 'metric', label: 'kg · cm · km' }], st.profile.units, (v) => { st.profile.units = v; save(); }))),
         h('p', { class: 'tiny muted mt', text: 'Everything you enter stays in this browser on this device. Nothing is sent anywhere. Back it up from Settings.' }),
-        nav(() => go(1), 'Let’s set up'));
+        nav(() => go(1), 'Let’s set up'),
+        h('p', { class: 'small muted mt center' }, 'Already use Forge on another device? ', h('a', { href: '#/welcome', onClick: (e) => { e.preventDefault(); F.syncSheet(() => { location.hash = F.store.load().profile.onboarded ? '#/' : '#/welcome/1'; }); } }, 'Connect sync to bring your data over')));
     } else if (step === 1) {
       const p = st.profile;
       wrap.append(h('h1', { text: 'About you' }), h('p', { class: 'muted mb', text: 'Used for calorie burn, heart-rate zones for the 4×4 and a protein target. Skip anything you like.' }),
@@ -209,6 +210,9 @@
       sf.pain.map((x) => h('div', { class: 'callout ' + x.tone + ' small mt-s' }, h('b', { text: x.level + ' — ' }), x.text)),
       sf.flags.map((f) => h('div', { class: 'mt' }, h('div', { class: 'eyebrow', text: 'Stop signs · ' + f.title }), f.items.map((t) => h('div', { class: 'callout red small mt-s', text: t }))))));
 
+    // Sync
+    wrap.append(syncCard());
+
     // Data
     const fileIn = h('input', { type: 'file', accept: '.json,application/json', hidden: true });
     let importMode = 'merge';
@@ -230,7 +234,7 @@
         h('button', { class: 'btn', onClick: async () => { if (await confirmDlg('Replace everything on this device with the backup?', { ok: 'Choose file', danger: true })) { importMode = 'replace'; fileIn.click(); } } }, 'Restore (replace)'),
         h('button', { class: 'btn danger', onClick: async () => { if (await confirmDlg('Delete all Forge data on this device?', { ok: 'Delete everything', danger: true, sub: 'Download a backup first if you might want it.' })) { F.store.reset(); location.hash = '#/welcome'; F.app.render(); } } }, 'Reset'),
         fileIn),
-      h('p', { class: 'tiny muted mt', text: 'Merge adds sessions, food, fasts and measurements you don’t have yet — use it to move between phone and laptop. Restore overwrites this device.' })));
+      h('p', { class: 'tiny muted mt', text: 'Merge adds sessions, food, fasts and measurements you don’t have yet. Restore overwrites this device.' + (F.sync.connected() ? ' With sync on, Reset clears only this device — your data comes back on the next sync unless you disconnect first.' : '') })));
 
     // About
     wrap.append(sec('about', 'About',
@@ -269,6 +273,84 @@
     };
     draw();
     return box;
+  }
+
+  // ---------- sync ----------
+  function ago(ts) {
+    const s = Math.round((Date.now() - ts) / 1000);
+    return s < 45 ? 'just now' : s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : new Date(ts).toLocaleDateString();
+  }
+  F.syncSheet = (onDone) => {
+    const tok = h('input', { type: 'password', placeholder: 'ghp_…', autocomplete: 'off', spellcheck: 'false' });
+    const pass = h('input', { type: 'password', placeholder: 'Optional — the same on every device', autocomplete: 'new-password' });
+    const msg = h('div', { class: 'small mt-s' });
+    const btn = h('button', { class: 'btn fire block mt', text: 'Connect' });
+    btn.addEventListener('click', async () => {
+      btn.disabled = true; btn.textContent = 'Connecting…'; msg.textContent = ''; msg.className = 'small mt-s';
+      try {
+        const r = await F.sync.connect(tok.value, pass.value);
+        sh.close();
+        toast(r.existing ? `Connected — pulled your data from your other device (${r.loaded} sessions).` : 'Connected — your private sync gist is set up.', 4200);
+        if (onDone) onDone(r); else F.app.render();
+      } catch (e) {
+        msg.textContent = e.message; msg.className = 'small mt-s red';
+        if (e.needPass) pass.focus();
+        btn.disabled = false; btn.textContent = 'Connect';
+      }
+    });
+    const sh = sheet(h('div', null,
+      h('h2', { text: 'Sync between devices' }),
+      h('p', { class: 'small muted', text: 'Forge keeps a copy of your data in a secret gist on your GitHub account, and every device you connect stays in step with it.' }),
+      h('ol', { class: 'cues small' },
+        h('li', null, 'Create a token with only the ', h('b', { text: 'gist' }), ' scope: ', h('a', { href: 'https://github.com/settings/tokens/new?scopes=gist&description=Forge%20sync', target: '_blank', rel: 'noopener', text: 'open GitHub' }), ', pick an expiry, generate, and copy it.'),
+        h('li', { text: 'Paste it below — the same token works on every device.' }),
+        h('li', { text: 'Add a passphrase to encrypt the gist (recommended: a secret gist is unlisted, not private). Use the same one everywhere. If it’s ever forgotten, each device still has its own copy.' })),
+      h('label', { class: 'field mt' }, h('span', { text: 'GitHub token' }), tok),
+      h('label', { class: 'field' }, h('span', { text: 'Passphrase (encrypts the gist)' }), pass),
+      h('p', { class: 'tiny muted', text: 'The token and passphrase stay in this browser only — never in the gist or in backups. The token is sent only to api.github.com.' }),
+      msg, btn));
+    setTimeout(() => tok.focus(), 120);
+  };
+  function passSheet() {
+    const pass = h('input', { type: 'password', placeholder: 'Leave empty to turn encryption off', autocomplete: 'new-password' });
+    const msg = h('div', { class: 'small mt-s' });
+    const btn = h('button', { class: 'btn primary block mt', text: 'Save passphrase' });
+    btn.addEventListener('click', async () => {
+      btn.disabled = true; msg.textContent = '';
+      try { await F.sync.setPassphrase(pass.value); sh.close(); toast(pass.value ? 'Passphrase saved — the gist is encrypted.' : 'Encryption turned off.', 3200); }
+      catch (e) { msg.textContent = e.message; msg.className = 'small mt-s red'; btn.disabled = false; }
+    });
+    const sh = sheet(h('div', null, h('h2', { text: 'Sync passphrase' }),
+      h('p', { class: 'small muted', text: 'Encrypts the gist with AES-GCM before it leaves this device. Set the same passphrase on your other devices — they’ll ask for it on their next sync.' }),
+      h('label', { class: 'field mt' }, h('span', { text: 'Passphrase' }), pass), msg, btn));
+    setTimeout(() => pass.focus(), 120);
+  }
+  function syncCard() {
+    const card = h('div', { class: 'card mt', id: 'sec-sync' });
+    let drawn = false, off = null;
+    const draw = () => {
+      if (drawn && !card.isConnected) { if (off) off(); return; }
+      drawn = true;
+      const i = F.sync.info();
+      card.replaceChildren(h('h2', { text: 'Sync between devices' }));
+      if (!i.connected) {
+        card.append(h('p', { class: 'small muted', text: 'Keep your phone and laptop in step through a secret gist on your GitHub account, encrypted with a passphrase if you like.' }),
+          h('button', { class: 'btn primary mt-s', text: 'Set up sync', onClick: () => F.syncSheet() }));
+        return;
+      }
+      const state = i.status === 'syncing' ? 'Syncing…' : i.status === 'offline' ? 'Offline — it will retry' : i.error ? '⚠ ' + i.error : '✓ Synced ' + (i.lastSync ? ago(i.lastSync) : '');
+      card.append(
+        h('div', { class: i.error && i.status !== 'offline' && i.status !== 'syncing' ? 'callout red small' : 'small', text: state }),
+        h('div', { class: 'small muted mt-s', text: `${i.user ? '@' + i.user + ' · ' : ''}secret gist ${String(i.gistId).slice(0, 8)}… · ${i.encrypted ? '🔒 encrypted' : 'not encrypted'}` }),
+        h('div', { class: 'btngroup mt' },
+          h('button', { class: 'btn primary', text: 'Sync now', onClick: () => F.sync.syncNow() }),
+          h('button', { class: 'btn', text: i.encrypted ? 'Change passphrase' : i.error && /passphrase|encrypted/.test(i.error) ? 'Enter passphrase' : 'Add passphrase', onClick: passSheet }),
+          h('button', { class: 'btn ghost', text: 'Disconnect', onClick: async () => { if (await confirmDlg('Disconnect sync on this device?', { ok: 'Disconnect', sub: 'Your data stays on this device and in the gist. Delete the gist at gist.github.com if you want it gone.' })) F.sync.disconnect(); } })),
+        h('p', { class: 'tiny muted mt', text: 'Syncs when Forge opens, when you come back to it, and a few seconds after you log something. If the same setting is changed on two devices, the latest change wins.' }));
+    };
+    off = F.sync.onStatus(draw);
+    draw();
+    return card;
   }
 
   function download(name, text) {

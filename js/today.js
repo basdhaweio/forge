@@ -220,7 +220,7 @@
     const daysSinceM = lastM ? F.ui.daysBetween(lastM.date, date) : null;
     if (!lastM || daysSinceM >= 28) nudges.append(h('div', { class: 'callout sky row between' }, h('span', { text: lastM ? `📏 Monthly measurements are due (${daysSinceM} days since the last).` : '📏 Log baseline measurements — the numbers you’ll beat.' }), h('button', { class: 'btn sm', text: 'Measure', onClick: () => F.measureSheet() })));
     const real = S.sessions.filter((x) => !x.auto).length;
-    if (real >= 8 && (!S.backupAt || F.ui.daysBetween(S.backupAt, date) >= 14)) nudges.append(h('div', { class: 'callout row between' }, h('span', { text: '💾 Your progress lives only on this device. Save a backup.' }), h('a', { class: 'btn sm', href: '#/settings/data', text: 'Back up' })));
+    if (real >= 8 && !F.sync.connected() && (!S.backupAt || F.ui.daysBetween(S.backupAt, date) >= 14)) nudges.append(h('div', { class: 'callout row between' }, h('span', { text: '💾 Your progress lives only on this device. Turn on sync or save a backup.' }), h('a', { class: 'btn sm', href: '#/settings/sync', text: 'Sync' })));
     if (nudges.childNodes.length) wrap.append(nudges);
 
     const iv = setInterval(() => { const el = document.querySelector('[data-fastmini]'); if (el && S.activeFast) el.replaceWith(F.fastMini(date)); }, 30000);

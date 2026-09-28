@@ -1,9 +1,14 @@
-/* Local state (localStorage), import/export, units. Everything the user logs lives here, on this device. */
+/* Local state (localStorage), merging (backups and sync), units. Everything the user logs lives here, on this device.
+   For sync, every record carries a timestamp (ts at creation, u when edited), deletions leave tombstones, and
+   profile/settings/equipment/quest checks/trips travel together as one last-writer-wins blob stamped prefsU. */
 window.F = window.F || {};
 
 F.store = (() => {
   const KEY = 'forge.v1';
-  let data = null, rev = 0, timer = null;
+  const PREFS = ['profile', 'settings', 'equipment', 'checks', 'trips'];
+  const LOCAL = ['active', 'backupAt'];        // never leaves this device
+  const TOMB_DAYS = 400;                       // how long a deletion is remembered
+  let data = null, rev = 0, timer = null, lastPrefs = '', dirty = false, listener = null;
 
   const DEFAULTS = () => ({
     version: 1,
@@ -32,33 +37,48 @@ F.store = (() => {
     measurements: [],
     checks: {},                 // quest step self-checks: 'quest.step' -> date
     seen: { init: false, level: 1, ach: {}, steps: {}, weeks: {}, stats: {} },
+    deleted: {},                // sync tombstones: kind -> {id: ts}
+    prefsU: 0,                  // when the PREFS blob last changed
+    activeFastU: 0,             // when a fast was last started, ended or cancelled
     active: null,               // in-progress session
     backupAt: null,
   });
 
   function fill(d) {
     const D = DEFAULTS();
-    for (const k of Object.keys(D)) if (d[k] === undefined) d[k] = D[k];
+    for (const k of Object.keys(D)) if (d[k] === undefined || (d[k] === null && D[k] !== null)) d[k] = D[k];
     for (const k of ['profile', 'settings', 'seen']) for (const kk of Object.keys(D[k])) if (d[k][kk] === undefined) d[k][kk] = D[k][kk];
     for (const k of ['injuries', 'focus']) for (const kk of Object.keys(D.profile[k])) if (d.profile[k][kk] === undefined) d.profile[k][kk] = D.profile[k][kk];
     for (const k of ['nutrition', 'fast', 'goals']) for (const kk of Object.keys(D.settings[k])) if (d.settings[k][kk] === undefined) d.settings[k][kk] = D.settings[k][kk];
     return d;
   }
+  const prefsKey = () => JSON.stringify(PREFS.map((k) => data[k]));
   function load() {
     if (data) return data;
     try {
       const raw = localStorage.getItem(KEY);
       data = raw ? JSON.parse(raw) : DEFAULTS();
     } catch (e) { data = DEFAULTS(); }
-    return fill(data);
+    fill(data);
+    lastPrefs = prefsKey();
+    return data;
   }
   function write() {
     try { localStorage.setItem(KEY, JSON.stringify(data)); }
     catch (e) { console.warn('save failed', e); F.ui.toast('Could not save — is storage full?', 4000); }
   }
-  function save() { rev++; clearTimeout(timer); timer = setTimeout(write, 40); }
-  function saveNow() { rev++; clearTimeout(timer); write(); }
+  // Every save checks whether the prefs blob changed and tells the sync layer about real edits.
+  function track() {
+    const p = prefsKey();
+    if (p !== lastPrefs) { lastPrefs = p; data.prefsU = Date.now(); dirty = true; }
+    if (dirty) { dirty = false; if (listener) listener(); }
+  }
+  function save() { rev++; track(); clearTimeout(timer); timer = setTimeout(write, 40); }
+  function saveNow() { rev++; track(); clearTimeout(timer); write(); }
   window.addEventListener('pagehide', () => { if (timer) { clearTimeout(timer); write(); } });
+  const touch = () => { dirty = true; };
+  function tomb(kind, id) { load(); (data.deleted[kind] || (data.deleted[kind] = {}))[id] = Date.now(); touch(); }
+  function onChange(fn) { listener = fn; }
 
   // ---- sessions ----
   function sortSessions() { data.sessions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.ts || 0) - (b.ts || 0))); }
@@ -68,38 +88,42 @@ F.store = (() => {
     rec.ts = rec.ts || Date.now();
     data.sessions.push(rec);
     sortSessions();
-    save();
+    touch(); save();
     return rec;
   }
-  function updateSession(id, patch) { const s = data.sessions.find((x) => x.id === id); if (s) { Object.assign(s, patch); sortSessions(); save(); } return s; }
-  function removeSession(id) { data.sessions = data.sessions.filter((x) => x.id !== id); save(); }
+  function updateSession(id, patch) { const s = data.sessions.find((x) => x.id === id); if (s) { Object.assign(s, patch, { u: Date.now() }); sortSessions(); touch(); save(); } return s; }
+  function removeSession(id) { data.sessions = data.sessions.filter((x) => x.id !== id); tomb('sessions', id); save(); }
   function sessionsOn(date) { return load().sessions.filter((s) => s.date === date); }
 
   // ---- days ----
   function day(date) { load(); return data.days[date] || (data.days[date] = {}); }
   function checkin(date) { return (load().days[date] || {}).checkin || null; }
-  function setCheckin(date, ci) { day(date).checkin = Object.assign({ ts: Date.now() }, ci); save(); }
+  function setCheckin(date, ci) { day(date).checkin = Object.assign({}, ci, { ts: Date.now() }); touch(); save(); }
 
   // ---- food ----
   function foodOn(date) { return load().food[date] || []; }
-  function addFood(date, item) { load(); (data.food[date] || (data.food[date] = [])).push(Object.assign({ id: F.ui.uid(), ts: Date.now() }, item)); save(); }
-  function removeFood(date, id) { if (!data.food[date]) return; data.food[date] = data.food[date].filter((x) => x.id !== id); if (!data.food[date].length) delete data.food[date]; save(); }
+  function addFood(date, item) { load(); (data.food[date] || (data.food[date] = [])).push(Object.assign({ id: F.ui.uid(), ts: Date.now() }, item)); touch(); save(); }
+  function removeFood(date, id) { if (!data.food[date]) return; data.food[date] = data.food[date].filter((x) => x.id !== id); if (!data.food[date].length) delete data.food[date]; tomb('food', id); save(); }
+  function addCustomFood(f) { load().foods.push(Object.assign({ id: F.ui.uid(), ts: Date.now() }, f)); touch(); save(); }
+  function removeCustomFood(id) { data.foods = data.foods.filter((x) => x.id !== id); tomb('foods', id); save(); }
 
   // ---- fasts ----
-  function startFast(start, targetH) { load().activeFast = { start, targetH }; save(); }
+  function startFast(start, targetH) { load().activeFast = { start, targetH }; data.activeFastU = Date.now(); touch(); save(); }
   function endFast(end) {
     const f = load().activeFast;
     if (!f) return null;
-    const rec = { id: F.ui.uid(), start: f.start, end, targetH: f.targetH };
-    data.fasts.push(rec); data.activeFast = null; save();
+    const rec = { id: F.ui.uid(), start: f.start, end, targetH: f.targetH, ts: Date.now() };
+    data.fasts.push(rec); data.activeFast = null; data.activeFastU = Date.now(); touch(); save();
     return rec;
   }
-  function removeFast(id) { data.fasts = data.fasts.filter((f) => f.id !== id); save(); }
+  function cancelFast() { load().activeFast = null; data.activeFastU = Date.now(); touch(); save(); }
+  function removeFast(id) { data.fasts = data.fasts.filter((f) => f.id !== id); tomb('fasts', id); save(); }
 
   // ---- measurements ----
-  function addMeasurement(m) { load().measurements.push(Object.assign({ id: F.ui.uid() }, m)); data.measurements.sort((a, b) => (a.date < b.date ? -1 : 1)); save(); }
-  function updateMeasurement(id, m) { const x = data.measurements.find((y) => y.id === id); if (x) Object.assign(x, m); data.measurements.sort((a, b) => (a.date < b.date ? -1 : 1)); save(); }
-  function removeMeasurement(id) { data.measurements = data.measurements.filter((x) => x.id !== id); save(); }
+  const byDate = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  function addMeasurement(m) { load().measurements.push(Object.assign({ id: F.ui.uid(), ts: Date.now() }, m)); data.measurements.sort(byDate); touch(); save(); }
+  function updateMeasurement(id, m) { const x = data.measurements.find((y) => y.id === id); if (x) Object.assign(x, m, { u: Date.now() }); data.measurements.sort(byDate); touch(); save(); }
+  function removeMeasurement(id) { data.measurements = data.measurements.filter((x) => x.id !== id); tomb('measurements', id); save(); }
 
   // ---- travel ----
   function isTravel(date) { return load().trips.some((t) => t.start <= date && (!t.end || t.end >= date)); }
@@ -113,40 +137,92 @@ F.store = (() => {
   }
   function location(date = F.ui.today()) { const S = load(); return isTravel(date) ? S.settings.travelLoc : S.settings.location; }
 
+  // ---- merging: backups and sync use the same rules ----
+  const stamp = (x) => x.u || x.ts || 0;
+  function mergeList(mine, theirs, kind, dead) {
+    const map = new Map();
+    for (const x of mine || []) if (x && x.id) map.set(x.id, x);
+    for (const x of theirs || []) { if (!x || !x.id) continue; const m = map.get(x.id); if (!m || stamp(x) > stamp(m)) map.set(x.id, x); }
+    const gone = dead[kind] || {};
+    return [...map.values()].filter((x) => !gone[x.id]);
+  }
+  function mergeSeen(a, b) {
+    if (!b) return;
+    a.init = !!(a.init || b.init);
+    a.level = Math.max(a.level || 1, b.level || 1);
+    for (const k of ['ach', 'steps', 'weeks', 'q']) a[k] = Object.assign({}, b[k] || {}, a[k] || {});
+    a.stats = a.stats || {};
+    for (const [k, v] of Object.entries(b.stats || {})) a.stats[k] = Math.max(a.stats[k] || 1, v);
+  }
+  // A cheap fingerprint of everything that syncs, to tell whether two copies differ.
+  function digest(d) {
+    const ids = (arr) => (arr || []).filter(Boolean).map((x) => x.id + ':' + stamp(x)).sort().join(',');
+    const food = d.food || {}, days = d.days || {}, seen = d.seen || {};
+    return JSON.stringify([
+      ids(d.sessions), ids(d.measurements), ids(d.fasts), ids(d.foods),
+      Object.keys(food).sort().map((k) => k + '=' + ids(food[k])).join(';'),
+      Object.keys(days).sort().map((k) => k + '=' + ((days[k] && days[k].checkin && days[k].checkin.ts) || 0)).join(';'),
+      Object.entries(d.deleted || {}).map(([k, v]) => k + ':' + Object.keys(v || {}).sort().join(',')).sort().join(';'),
+      d.prefsU || 0, d.activeFastU || 0,
+      Object.keys(seen.ach || {}).length, Object.keys(seen.steps || {}).length, Object.keys(seen.weeks || {}).length, Object.keys(seen.q || {}).length, seen.level || 1,
+    ]);
+  }
+  // Fold another copy (a backup file or the sync gist) into this one. Returns true if anything here changed.
+  function merge(incoming, { preferRemotePrefs = false } = {}) {
+    const d = load();
+    const before = digest(d);
+    const inc = fill(JSON.parse(JSON.stringify(incoming)));
+    const cutoff = Date.now() - TOMB_DAYS * 864e5;
+    for (const [kind, ids] of Object.entries(inc.deleted || {})) d.deleted[kind] = Object.assign(d.deleted[kind] || {}, ids);
+    for (const kind of Object.keys(d.deleted)) for (const [id, t] of Object.entries(d.deleted[kind])) if (t < cutoff) delete d.deleted[kind][id];
+    d.sessions = mergeList(d.sessions, inc.sessions, 'sessions', d.deleted); sortSessions();
+    d.measurements = mergeList(d.measurements, inc.measurements, 'measurements', d.deleted).sort(byDate);
+    d.fasts = mergeList(d.fasts, inc.fasts, 'fasts', d.deleted).sort((a, b) => (a.start || 0) - (b.start || 0));
+    d.foods = mergeList(d.foods, inc.foods, 'foods', d.deleted);
+    for (const date of new Set([...Object.keys(d.food), ...Object.keys(inc.food || {})])) {
+      const list = mergeList(d.food[date], (inc.food || {})[date], 'food', d.deleted).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      if (list.length) d.food[date] = list; else delete d.food[date];
+    }
+    for (const [date, dd] of Object.entries(inc.days || {})) {
+      if (!dd || !dd.checkin) continue;
+      const mine = d.days[date] || (d.days[date] = {});
+      if (!mine.checkin || (dd.checkin.ts || 0) > (mine.checkin.ts || 0)) mine.checkin = dd.checkin;
+    }
+    if (inc.profile.onboarded && (preferRemotePrefs || !d.profile.onboarded || (inc.prefsU || 0) > (d.prefsU || 0))) {
+      for (const k of PREFS) d[k] = inc[k];
+      d.prefsU = inc.prefsU || 0;
+    }
+    if ((inc.activeFastU || 0) > (d.activeFastU || 0)) { d.activeFast = inc.activeFast || null; d.activeFastU = inc.activeFastU; }
+    if (inc.created && inc.created < d.created) d.created = inc.created;
+    mergeSeen(d.seen, inc.seen);
+    fill(d);
+    lastPrefs = prefsKey();                    // adopting the other copy's prefs isn't a local edit
+    const changed = digest(d) !== before;
+    if (changed) { rev++; clearTimeout(timer); write(); }
+    return changed;
+  }
+  // What goes to the gist: everything except device-local bits.
+  function snapshot() {
+    const d = load(), o = {};
+    for (const k of Object.keys(d)) if (!LOCAL.includes(k)) o[k] = d[k];
+    return o;
+  }
+
   // ---- export / import ----
   function exportJSON() { load().backupAt = F.ui.today(); saveNow(); return JSON.stringify(data, null, 1); }
   function importJSON(text, mode = 'merge') {
     const inc = JSON.parse(text);
     if (!inc || typeof inc !== 'object' || !Array.isArray(inc.sessions) || !inc.profile) throw new Error('Not a Forge backup file');
-    if (mode === 'replace') { data = fill(inc); saveNow(); return; }
-    const d = load();
-    const byId = (arr) => new Map(arr.map((x) => [x.id, x]));
-    const ses = byId(d.sessions); for (const s of inc.sessions) if (!ses.has(s.id)) d.sessions.push(s);
-    sortSessions();
-    for (const [date, items] of Object.entries(inc.food || {})) {
-      const mine = d.food[date] || (d.food[date] = []); const ids = new Set(mine.map((x) => x.id));
-      for (const it of items) if (!ids.has(it.id)) mine.push(it);
-    }
-    const fm = byId(d.fasts); for (const f of inc.fasts || []) if (!fm.has(f.id)) d.fasts.push(f);
-    const mm = byId(d.measurements); for (const m of inc.measurements || []) if (!mm.has(m.id)) d.measurements.push(m);
-    d.measurements.sort((a, b) => (a.date < b.date ? -1 : 1));
-    const cf = new Set(d.foods.map((x) => x.id)); for (const f of inc.foods || []) if (!cf.has(f.id)) d.foods.push(f);
-    for (const [date, dd] of Object.entries(inc.days || {})) {
-      const mine = d.days[date] || (d.days[date] = {});
-      if (dd.checkin && (!mine.checkin || (dd.checkin.ts || 0) > (mine.checkin.ts || 0))) mine.checkin = dd.checkin;
-    }
-    Object.assign(d.checks, inc.checks || {});
-    for (const t of inc.trips || []) if (!d.trips.some((x) => x.start === t.start)) d.trips.push(t);
-    if (!d.profile.onboarded && inc.profile.onboarded) { d.profile = inc.profile; d.settings = inc.settings; d.equipment = inc.equipment; }
-    fill(d);
-    saveNow();
+    if (mode === 'replace') { data = fill(inc); lastPrefs = prefsKey(); touch(); saveNow(); return; }
+    merge(inc);
+    touch(); saveNow();
   }
-  function reset() { data = DEFAULTS(); saveNow(); }
+  function reset() { data = DEFAULTS(); lastPrefs = prefsKey(); saveNow(); }
 
-  return { load, save, saveNow, rev: () => rev, addSession, updateSession, removeSession, sessionsOn,
-    day, checkin, setCheckin, foodOn, addFood, removeFood, startFast, endFast, removeFast,
-    addMeasurement, updateMeasurement, removeMeasurement, isTravel, startTrip, endTrip, location,
-    exportJSON, importJSON, reset };
+  return { load, save, saveNow, rev: () => rev, onChange, addSession, updateSession, removeSession, sessionsOn,
+    day, checkin, setCheckin, foodOn, addFood, removeFood, addCustomFood, removeCustomFood,
+    startFast, endFast, cancelFast, removeFast, addMeasurement, updateMeasurement, removeMeasurement,
+    isTravel, startTrip, endTrip, location, merge, snapshot, digest, exportJSON, importJSON, reset };
 })();
 
 /* Units: everything is stored in lb / in / mi; converted only for display and input. */

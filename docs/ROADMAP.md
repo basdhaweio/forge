@@ -4,7 +4,6 @@ The first version covers planning, logging, adapting and gamification, all on on
 
 ## Likely next
 
-- **Cross-device sync.** A private GitHub Gist holding the backup JSON: push after each session, pull on launch. The merge logic already exists in `F.store.importJSON`.
 - **Progress photos.** Store them in IndexedDB so they never leave the device, with a monthly slot beside the tape measurements and a side-by-side compare.
 - **Reminders.** An ntfy push for the morning check-in, the fast-day start and monthly measurements, run from a GitHub Actions cron like Canto's plan.
 

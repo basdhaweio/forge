@@ -17,7 +17,7 @@
     };
     const chip = (f, treat) => h('button', { class: 'foodchip' + (treat ? ' treat' : ''), onClick: () => (manage && f.custom ? removeCustom(f) : add(Object.assign({ treat }, f))) },
       h('b', { text: (manage && f.custom ? '✕ ' : '') + f.name }), h('small', { text: `${num(f.p)}g P · ${num(f.sug)}g sugar${f.kcal ? ' · ' + num(f.kcal) + ' kcal' : ''}` }));
-    function removeCustom(f) { S.foods = S.foods.filter((x) => x.id !== f.id); F.store.save(); draw(); }
+    function removeCustom(f) { F.store.removeCustomFood(f.id); draw(); }
     function draw() {
       out.innerHTML = '';
       const tabs = h('div', { class: 'tabs' });
@@ -38,7 +38,7 @@
           h('label', { class: 'toggle' }, treat, 'It’s a treat'), h('label', { class: 'toggle' }, keep, 'Save to My foods'),
           h('button', { class: 'btn primary block mt-s', text: 'Add', onClick: () => {
             const f = { name: name.value.trim() || 'Food', p: +p.value || 0, sug: +sug.value || 0, kcal: +kc.value || 0, treat: treat.checked };
-            if (keep.checked) { S.foods.push(Object.assign({ id: F.ui.uid() }, f)); F.store.save(); }
+            if (keep.checked) F.store.addCustomFood(f);
             add(f); tab = lastTab = keep.checked ? 'mine' : 'protein'; draw();
           } }));
       }
@@ -111,7 +111,7 @@
     card.append(h('div', { class: 'row between' }, h('div', { class: 'eyebrow', text: `⏳ Fasting since ${when(f.start)}` }), pill(`target ${f.targetH} h`, 'purple')),
       clock, stagesBar, meta, h('div', { class: 'mt' }, stageBox),
       h('details', { class: 'acc mt' }, h('summary', { text: 'Fasting tips' }), h('div', { class: 'acc-body' }, h('ul', { class: 'cues' }, P.fastingTips.map((t) => h('li', { class: 'small', text: t }))))),
-      h('div', { class: 'btngroup mt' }, h('button', { class: 'btn primary', onClick: () => endFast(rerender) }, 'End fast'), h('button', { class: 'btn ghost sm', text: 'Cancel (didn’t count)', onClick: async () => { if (await confirmDlg('Cancel this fast without logging it?', { ok: 'Cancel fast', danger: true })) { S.activeFast = null; F.store.save(); rerender(); } } })));
+      h('div', { class: 'btngroup mt' }, h('button', { class: 'btn primary', onClick: () => endFast(rerender) }, 'End fast'), h('button', { class: 'btn ghost sm', text: 'Cancel (didn’t count)', onClick: async () => { if (await confirmDlg('Cancel this fast without logging it?', { ok: 'Cancel fast', danger: true })) { F.store.cancelFast(); rerender(); } } })));
     return card;
   }
   function startedEarlier(target, rerender) {

@@ -27,6 +27,7 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
   - Optional calories
   - A **fasting timer** that walks through what the body is doing hour by hour
 - **Body**: monthly tape measurements with trends, the V-taper ratio and waist-to-height ratio.
+- **Sync** (Settings → Sync): keeps your phone and laptop in step through a secret gist on your GitHub account, optionally encrypted with a passphrase.
 - **Plan for your PT** (Settings → Program): a printable page with the week, every exercise the plan uses at home, their knee and back flags, and the rules the app follows.
 - **Hero**:
   - Level and title
@@ -61,6 +62,18 @@ Then open http://localhost:8777/. The service worker is skipped on localhost unl
 
 Edit the JSON in `data/`, then run `python tools/validate.py`. It should report 0 errors. Exercise ids are stable keys for history, so rename by adding a new id rather than changing an existing one. When you change shell files, bump `VERSION` in `sw.js` so installed copies update.
 
-## Privacy
+## Privacy and sync
 
-Injuries, goals, measurements and logs live only in the browser's localStorage on the device you use. None of it goes into this repo. To move between devices, use **Settings → Your data**: download a backup and import it with merge.
+Injuries, goals, measurements and logs live in the browser's localStorage on each device. None of it goes into this repo.
+
+**Sync (Settings → Sync)** copies that data to a secret gist on your own GitHub account:
+- You create a GitHub token with only the `gist` scope.
+- A secret gist is unlisted, not private, so an optional passphrase encrypts the data in the browser (AES-GCM with a PBKDF2-derived key) before upload.
+- The token and passphrase stay in each browser under a separate key and never go into the gist or backups.
+
+How syncing works:
+- The app pulls when it opens and when you return to it, and pushes a few seconds after you log something.
+- Records carry timestamps and deletions leave tombstones, so edits and deletes sync correctly.
+- Settings travel as one block, so the latest change wins.
+
+Without sync, **Settings → Your data** downloads a backup and imports it with the same merge.

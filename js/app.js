@@ -85,6 +85,7 @@ F.app = (() => {
     window.addEventListener('hashchange', render);
     render();
     if (S.profile.onboarded) setTimeout(() => F.game.afterChange(), 700);
+    F.sync.start();
     // New day while the app sits open: refresh Today.
     setInterval(() => { const d = F.ui.today(); if (d !== lastDay) { lastDay = d; if (!location.hash || location.hash === '#/') render(); else chrome(); } }, 60000);
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
