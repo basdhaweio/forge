@@ -19,7 +19,7 @@
       }
       const today = F.ui.today();
       const dateIn = h('input', { type: 'date', value: date || today, max: today });
-      const minIn = F.ui.numIn(act.id === 'walk' ? S.settings.walkMin || 30 : act.id === 'krav_class' ? 60 : act.id === 'pt_visit' ? 45 : 30, { step: 1 });
+      const minIn = F.ui.numIn(act.id === 'walk' ? S.settings.walkMin || 30 : act.id === 'krav_class' || act.id === 'pt_visit' ? 60 : 30, { step: 1 });
       const distIn = act.fields.includes('dist') ? F.ui.numIn(null, { placeholder: F.u.du() }) : null;
       const hrIn = act.fields.includes('hr') ? F.ui.numIn(null, { placeholder: 'bpm', step: 1 }) : null;
       const stepsIn = act.fields.includes('steps') ? F.ui.numIn(null, { placeholder: 'steps', step: 1 }) : null;

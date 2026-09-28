@@ -256,6 +256,11 @@
       const commit = () => { st.settings.ptRoutine = list; save(); };
       box.innerHTML = '';
       box.append(h('p', { class: 'small muted', text: 'Match this to what your PT gave you. Each row shows as a set-counter in the daily PT quest.' }));
+      const cov = st.settings.formalPtCovers || (st.settings.formalPtCovers = { holds: false, mobility: false });
+      box.append(h('div', { class: 'small mt-s' }, 'A formal PT day (🩺 on Today) counts as this routine. Let it also cover:'),
+        h('div', { class: 'chips mt-s mb' },
+          F.ui.chip('Daily holds', !!cov.holds, (on) => { cov.holds = on; save(); }, 'small'),
+          F.ui.chip('Roll & stretch', !!cov.mobility, (on) => { cov.mobility = on; save(); }, 'small')));
       list.forEach((it, i) => {
         const e = F.data.ex(it.ex);
         const sets = F.ui.numIn(it.sets, { w: '56px', step: 1, onInput: (v) => { it.sets = Math.max(1, v || 1); commit(); } });

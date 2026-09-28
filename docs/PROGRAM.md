@@ -4,7 +4,7 @@ This is how Forge builds each day and week, written so a physical therapist can 
 
 ## Principles
 
-1. **PT every day, and it counts.** The PT routine is a daily quest worth more XP than a walk. It builds the Armor stat and logs as exercise.
+1. **PT every day, and it counts.** The PT routine is a daily quest worth more XP than a walk. It builds the Armor stat and logs as exercise. On formal PT days (clinic or PT Pilates), one tap logs the appointment as PT, and it covers the home routine.
 2. **Knees:** meniscus / cartilage.
    - Limit deep knee flexion under load: squats go to a box at a pain-free depth, with a default ceiling of about 90° of knee bend (thighs parallel) until the PT clears deeper. Hamstring curls stop around 90° too.
    - No twisting on a planted, bent knee: Krav footwork pivots on the ball of the foot.

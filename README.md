@@ -9,6 +9,7 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
 ## What it does
 
 - **Today**: a morning check-in (knees, back, energy), today's mission from the weekly schedule, 7 daily quests (check-in, PT, isometric holds, roll & stretch, walk, protein, food log), a fuel snapshot and the weekly quests.
+- **Formal PT days**: one tap on 🩺 "Formal PT today?" logs a clinic or PT Pilates session as PT and covers the home PT routine for the day. Settings → Program can let it cover holds and stretching too.
 - **Adapts**:
   - **Travel mode** swaps in the hotel-room or hotel-gym kit, makes the 4×4 machine-free and scales the weekly quests to the days away.
   - A **flare-up** check-in swaps the day to a recovery session. Recovery days keep the streak and earn bonus XP.

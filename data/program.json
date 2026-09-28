@@ -320,7 +320,7 @@
     {"id": "cardio_other", "label": "Elliptical / rower / swim", "icon": "🌊", "met": 6.0, "tags": ["z2", "cardio"], "stat": "END", "fields": ["min", "dist", "hr"]},
     {"id": "krav_class", "label": "Krav Maga class", "icon": "🥋", "met": 8.0, "tags": ["krav"], "stat": "AGI", "fields": ["min"]},
     {"id": "yoga_class", "label": "Yoga class", "icon": "🧘", "met": 3.0, "tags": ["yoga"], "stat": "MOB", "fields": ["min"]},
-    {"id": "pt_visit", "label": "PT appointment", "icon": "🩺", "met": 3.0, "tags": ["pt"], "stat": "ARMOR", "fields": ["min"]},
+    {"id": "pt_visit", "label": "Formal PT / PT Pilates", "icon": "🩺", "met": 3.0, "tags": ["pt", "formalpt"], "stat": "ARMOR", "fields": ["min"]},
     {"id": "lift", "label": "Weights (freestyle)", "icon": "🏋️", "met": 5.0, "tags": ["lift"], "stat": "STR", "fields": ["min"]},
     {"id": "trx", "label": "TRX (freestyle)", "icon": "🔗", "met": 5.0, "tags": ["lift"], "stat": "STR", "fields": ["min"]},
     {"id": "stretch", "label": "Stretching / rolling", "icon": "🌀", "met": 2.3, "tags": ["mobility"], "stat": "MOB", "fields": ["min"]},

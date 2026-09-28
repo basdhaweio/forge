@@ -26,6 +26,52 @@
     return true;
   }
 
+  // Formal PT (a clinic or PT Pilates session) counts as PT: it satisfies the PT-routine daily and logs as exercise.
+  // Settings → Program can let it cover the daily holds and roll & stretch too.
+  const isFormal = (x) => x.act === 'pt_visit' || (x.tags || []).includes('formalpt');
+  const formalOn = (date) => F.store.sessionsOn(date).find(isFormal) || null;
+  function formalMinutes() {
+    const ss = F.store.load().sessions;
+    for (let i = ss.length - 1; i >= 0; i--) if (isFormal(ss[i])) return ss[i].minutes || 60;
+    return 60;
+  }
+  function logFormal(date) {
+    const P = F.data.prog(), S = F.store.load();
+    const act = P.activities.find((a) => a.id === 'pt_visit');
+    const minutes = formalMinutes();
+    const rec = { date, tpl: null, act: act.id, title: act.label, icon: act.icon, tags: act.tags.slice(), stat: act.stat, met: act.met, phase: S.settings.phase,
+      loc: F.store.location(date), minutes, kcal: F.game.kcal(act.met, minutes), entries: [], prs: [] };
+    const x = F.game.sessionXP(rec);
+    rec.xp = x.xp; rec.split = x.split;
+    F.store.addSession(rec);
+    const ptTask = P.dailyTasks.find((t) => t.id === 'pt');
+    F.ui.xpFloat(rec.xp + (ptTask ? ptTask.xp : 0), '🛡️');
+    F.timer.sfx('pop');
+    toast(`Formal PT logged · ${minutes} min — PT routine covered`, 3200, { label: 'Edit', run: () => F.formalSheet(date) });
+    F.game.afterChange();
+    F.app.render();
+  }
+  F.formalSheet = (date) => {
+    const rec = formalOn(date);
+    if (!rec) return;
+    const minIn = F.ui.numIn(rec.minutes, { step: 5 });
+    const notes = h('textarea', { placeholder: 'Notes (optional)', style: { minHeight: '50px' } });
+    notes.value = rec.notes || '';
+    const sh = sheet(h('div', { class: 'stack' },
+      h('h2', { text: '🩺 Formal PT' }),
+      h('p', { class: 'small muted', text: 'Counts as your PT for the day, so the home PT routine is covered.' }),
+      h('label', { class: 'field' }, h('span', { text: 'Minutes' }), minIn), notes,
+      h('div', { class: 'btngroup' },
+        h('button', { class: 'btn primary', text: 'Save', onClick: () => {
+          const minutes = Math.max(5, +minIn.value || rec.minutes);
+          const patch = { minutes, kcal: F.game.kcal(rec.met, minutes), notes: notes.value.trim() };
+          const x = F.game.sessionXP(Object.assign({}, rec, patch));
+          F.store.updateSession(rec.id, Object.assign(patch, { xp: x.xp, split: x.split }));
+          sh.close(); F.game.afterChange(); F.app.render();
+        } }),
+        h('button', { class: 'btn danger', text: 'Not a PT day', onClick: () => { F.store.removeSession(rec.id); sh.close(); F.app.render(); } }))));
+  };
+
   F.quickMenu = () => {
     const S = F.store.load();
     const go = (fn) => () => { sh.close(); fn(); };
@@ -151,6 +197,19 @@
     const tdone = dayRec.tasks || new Set();
     const ql = h('div', { class: 'card tight quests' });
     const protein = dayRec.protein || 0, pT = F.game.proteinTarget(), walked = dayRec.walkMin || 0, walkT = S.settings.walkMin || 30;
+    const formal = formalOn(date);
+    const cover = S.settings.formalPtCovers || {};
+    const covered = new Set(formal ? ['pt'].concat(['holds', 'mobility'].filter((k) => cover[k])) : []);
+    const coverText = ['your PT routine', covered.has('holds') ? 'daily holds' : '', covered.has('mobility') ? 'roll & stretch' : ''].filter(Boolean).join(', ');
+    const fpt = formal
+      ? h('div', { class: 'fpt on', onClick: () => F.formalSheet(date) },
+        h('span', { class: 'emo', text: '🩺' }),
+        h('div', { class: 't' }, h('b', { text: 'Formal PT day' }), h('small', { text: `${F.ui.dur(formal.minutes)}${formal.notes ? ' · ' + formal.notes : ''} · covers ${coverText}` })),
+        h('span', { class: 'pill purple', text: 'Edit' }))
+      : h('button', { class: 'fpt', onClick: () => logFormal(date) },
+        h('span', { class: 'emo', text: '🩺' }),
+        h('div', { class: 't' }, h('b', { text: 'Formal PT today?' }), h('small', { text: 'Tap after PT or PT Pilates — it counts as your PT routine' })),
+        icon('plus', 18));
     const holdsTpl = F.data.templateFor('holds', date), c = F.data.ctx(date);
     const holdNames = holdsTpl.blocks[0].items.map((it) => { const r = F.data.resolveSlot(it.slot, c); return r.ex ? r.ex.name : null; }).filter(Boolean).join(' + ');
     const subs = {
@@ -164,24 +223,27 @@
     };
     for (const t of P.dailyTasks) {
       const done = tdone.has(t.id);
+      const cov = covered.has(t.id);
       const open = () => {
-        if (t.kind === 'session') F.startSession(t.session);
+        if (cov) F.formalSheet(date);
+        else if (t.kind === 'session') F.startSession(t.session);
         else if (t.kind === 'walk') F.quickLog('walk');
         else if (t.kind === 'protein' || t.kind === 'food') location.hash = '#/fuel';
         else if (t.kind === 'checkin') { drawCheckin(true); ciCard.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       };
       const tick = h('button', { class: 'tick' + (done ? ' on' : ''), 'aria-label': done ? 'Undo' : 'Mark done', onClick: (ev) => {
         ev.stopPropagation();
-        if (t.kind === 'session') { if (done) { if (undoTask(t, date)) F.app.render(); } else { quickComplete(t, date); F.app.render(); } }
+        if (cov) F.formalSheet(date);
+        else if (t.kind === 'session') { if (done) { if (undoTask(t, date)) F.app.render(); } else { quickComplete(t, date); F.app.render(); } }
         else open();
       } }, icon('check', 16));
-      ql.append(h('div', { class: 'qrow' + (done ? ' done' : ''), onClick: open },
+      ql.append(h('div', { class: 'qrow' + (done ? ' done' : '') + (cov ? ' covered' : ''), onClick: open },
         h('span', { class: 'emo', text: t.icon }),
-        h('div', { class: 't' }, h('b', { text: t.label === 'Walk' ? `Walk ${walkT} min` : t.label }), h('small', { text: subs[t.id] || t.sub || '' })),
+        h('div', { class: 't' }, h('b', { text: t.label === 'Walk' ? `Walk ${walkT} min` : t.label }), h('small', { text: cov ? 'Covered by formal PT 🩺' : subs[t.id] || t.sub || '' })),
         h('span', { class: 'pill xp', text: '+' + t.xp }), tick));
     }
     const nDone = P.dailyTasks.filter((t) => tdone.has(t.id)).length;
-    wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: 'Daily quests' }), h('span', { class: 'small muted', text: `${nDone} / ${P.dailyTasks.length}` })), ql));
+    wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: 'Daily quests' }), h('span', { class: 'small muted', text: `${nDone} / ${P.dailyTasks.length}` })), fpt, ql));
 
     // ----- fuel snapshot -----
     const wk = C.thisWeek;

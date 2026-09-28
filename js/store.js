@@ -27,6 +27,7 @@ F.store = (() => {
       fast: { day: 0, targetH: 24 },
       goals: { thresholdLb: null, photoWaist: 2, photoArms: 1 },
       quests: {},
+      formalPtCovers: { holds: false, mobility: false },   // what a formal PT day also counts for
     },
     trips: [],                  // [{start, end|null}]
     days: {},                   // date -> {checkin:{knee,back,energy,ts}}

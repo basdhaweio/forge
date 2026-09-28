@@ -101,10 +101,11 @@ F.game = (() => {
   // ---------- daily tasks ----------
   function tasksDoneFor(date, d, S, proteinT, walkT) {
     const out = new Set();
+    const cover = S.settings.formalPtCovers || {};
     for (const t of F.data.prog().dailyTasks) {
       if (t.kind === 'checkin') { if (S.days[date] && S.days[date].checkin) out.add(t.id); }
       else if (!d) continue;
-      else if (t.kind === 'session') { if (t.tags.some((g) => d.tags.has(g))) out.add(t.id); }
+      else if (t.kind === 'session') { if (t.tags.some((g) => d.tags.has(g)) || (cover[t.id] && d.tags.has('formalpt'))) out.add(t.id); }
       else if (t.kind === 'walk') { if (d.walkMin >= walkT) out.add(t.id); }
       else if (t.kind === 'protein') { if (d.protein >= proteinT) out.add(t.id); }
       else if (t.kind === 'food') { if (d.foodN > 0) out.add(t.id); }
@@ -174,6 +175,7 @@ F.game = (() => {
       const d = D(s.date), tags = s.tags || [];
       d.active = true; d.sessions++; d.min += s.minutes || 0; d.kcal += s.kcal || 0;
       tags.forEach((t) => d.tags.add(t));
+      if (s.act === 'pt_visit') d.tags.add('formalpt');
       T.sessions++; if (!s.auto) T.realSessions++;
       T.minutes += s.minutes || 0; T.kcal += s.kcal || 0; T.prs += (s.prs || []).length;
       for (const t of tags) {
