@@ -9,6 +9,7 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
 ## What it does
 
 - **Today**: a morning check-in (knees, back, energy), today's mission from the weekly schedule, 7 daily quests (check-in, PT, isometric holds, roll & stretch, walk, protein, food log), a fuel snapshot and the weekly quests.
+- **Catch up on a day you forgot**: the strip above Today shows the last seven days, with what each earned and which were missed. Tap one to open that day, then tick its PT, holds and stretching, check in, log food, and mark a session done or fill in its sets and weights. The + button can also log to yesterday or any earlier day.
 - **Formal PT days**: one tap on 🩺 "Formal PT today?" logs a clinic or PT Pilates session as PT and covers the home PT routine for the day. Settings → Program can let it cover holds and stretching too.
 - **Adapts**:
   - **Home by default, gym when you go**: every day is planned for the home kit (rack, TRX, heavy bag, bands, PT gear). Tap **Gym day** on Today when you get to the gym and that day's strength session becomes Gym day A or B (pulldown, cables, machines). The next day goes back to home.
@@ -29,7 +30,7 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
   - **Meals**: build a meal from ingredients once (it totals the protein and calories), then log it with one tap; a chocolate protein smoothie is included
   - Protein by portion ("palm of chicken, meat or fish" ≈ 30 g), so no weighing
   - Optional calories
-  - A **fasting timer** that walks through what the body is doing hour by hour
+  - A **fasting timer** that walks through what the body is doing hour by hour. It can be started from when you last ate (“last night 8 PM”), have its start fixed, be ended at the time you actually ate, or take a fast you never timed
 - **Body**: monthly tape measurements with trends, the V-taper ratio and waist-to-height ratio.
 - **Sync** (Settings → Sync): keeps your phone and laptop in step through a secret gist on your GitHub account, optionally encrypted with a passphrase.
 - **Plan for your PT** (Settings → Program): a printable page with the week, every exercise the plan uses at home, their knee and back flags, and the rules the app follows.

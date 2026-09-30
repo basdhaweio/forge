@@ -35,6 +35,8 @@ F.game = (() => {
   }
   function suggestKcal() { const b = bmr(); return b ? Math.round((b * 1.45 - 300) / 50) * 50 : null; }
   const e1rm = (w, r) => (w && r ? w * (1 + Math.min(r, 15) / 30) : 0);
+  // XP for a finished fast: fixed at 24 h and 36 h, a little for 16 h+, nothing extra for going longer.
+  const fastXP = (hrs) => (hrs >= 36 ? 200 : hrs >= 24 ? 150 : hrs >= 16 ? 60 : 0);
 
   // ---------- levels ----------
   function titleFor(L) { let t = 'Recruit'; for (const [lv, name] of F.data.prog().titles) if (L >= lv) t = name; return t; }
@@ -239,9 +241,9 @@ F.game = (() => {
     for (const f of S.fasts) {
       const hrs = (f.end - f.start) / 3.6e6, date = F.ui.ymd(new Date(f.end));
       T.fastHours += hrs;
-      if (hrs >= 36) { T.fasts36++; T.fasts24++; give(date, 200, 'FUEL', 'fasts'); }
-      else if (hrs >= 24) { T.fasts24++; give(date, 150, 'FUEL', 'fasts'); }
-      else if (hrs >= 16) give(date, 60, 'FUEL', 'fasts');
+      if (hrs >= 36) T.fasts36++;
+      if (hrs >= 24) T.fasts24++;
+      give(date, fastXP(hrs), 'FUEL', 'fasts');
     }
     for (const m of S.measurements) give(m.date, 50, null, 'measures');
 
@@ -294,7 +296,7 @@ F.game = (() => {
 
     const stats = {};
     for (const st of P.stats) stats[st.id] = Object.assign({ id: st.id, name: st.name, icon: st.icon, color: st.color, desc: st.desc }, statInfo(statXP[st.id] || 0));
-    const C = { src, statXP, stats, days, T, streak, weeks, thisWeek: weeks[thisWS], proteinDays, sugarWeeks, perfectWeeks, weeks3, travelActiveDays,
+    const C = { src, statXP, stats, days, T, streak, weeks, thisWeek: weeks[thisWS], firstDay: firstDates[0] || today, proteinDays, sugarWeeks, perfectWeeks, weeks3, travelActiveDays,
       minStatLevel: Math.min(...Object.values(stats).map((x) => x.level)) };
     C.metric = (name) => metric(name, C, S);
 
@@ -437,5 +439,5 @@ F.game = (() => {
   }
 
   return { compute, afterChange, sessionXP, detectPRs, prText, weekQuotas, metricText, levelInfo, statInfo, titleFor,
-    weightLb, kcal, age, hrMax, proteinTarget, treatBudget, tpOf, bmr, suggestKcal, e1rm, COOKIE_KCAL, QSTAT };
+    weightLb, kcal, age, hrMax, proteinTarget, treatBudget, tpOf, bmr, suggestKcal, e1rm, fastXP, COOKIE_KCAL, QSTAT };
 })();

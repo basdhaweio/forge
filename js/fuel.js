@@ -143,7 +143,7 @@
     return out;
   }
   F.foodSheet = (date = F.ui.today()) => {
-    sheet(h('div', null, h('h2', { text: 'Add food' }), h('p', { class: 'small muted mb', text: 'One tap logs a portion — tap twice for two.' }), foodPicker(date, () => F.app.render())));
+    sheet(h('div', null, h('h2', { text: 'Add food' + (date === F.ui.today() ? '' : ' · ' + F.ui.fmtDate(date)) }), h('p', { class: 'small muted mb', text: 'One tap logs a portion — tap twice for two.' }), foodPicker(date, () => F.app.render())));
   };
 
   // ---------- fasting ----------
@@ -155,6 +155,75 @@
   }
   const hm = (hrs) => { const m = Math.max(0, Math.round(hrs * 60)); return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
   const when = (ms) => new Date(ms).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  const dtLocal = (ms) => { const d = new Date(ms), p2 = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+  const fromDt = (v) => { const t = v ? new Date(v).getTime() : NaN; return isNaN(t) ? null : t; };
+  const MAX_H = 96;   // longest fast the timer will accept
+  // Why the span a..b can't be a fast: it overlaps one already logged, or the one that's running.
+  function clash(a, b, running) {
+    const S = F.store.load();
+    const hit = S.fasts.find((f) => a < f.end && b > f.start);
+    if (hit) return `That overlaps the fast you logged from ${when(hit.start)} to ${when(hit.end)}.`;
+    return running && S.activeFast && b > S.activeFast.start ? 'That overlaps the fast that’s running now.' : '';
+  }
+
+  // The most recent 9, 8, 7 and 6 PM: the usual last meal before a fast the timer wasn't started for.
+  function eveningChips(now) {
+    const today = F.ui.today();
+    return [21, 20, 19, 18].map((hr) => { const d = new Date(now); d.setHours(hr, 0, 0, 0); if (d.getTime() > now) d.setDate(d.getDate() - 1); return d.getTime(); })
+      .sort((x, y) => y - x)
+      .map((t) => ({ t, label: (F.ui.ymd(new Date(t)) === today ? 'Today ' : 'Last night ') + new Date(t).toLocaleTimeString(undefined, { hour: 'numeric' }) }));
+  }
+  // Quick picks plus an exact date and time. "Just now" keeps meaning now, however long the sheet stays open.
+  function timePicker(value, chips, onChange) {
+    const opened = Date.now();
+    let t = value;
+    const inp = h('input', { type: 'datetime-local', value: dtLocal(t), max: dtLocal(opened), 'aria-label': 'Date and time' });
+    const row = h('div', { class: 'chips' });
+    const paint = () => row.querySelectorAll('button').forEach((el, i) => el.classList.toggle('on', Math.abs(chips[i].t - t) < 60000));
+    chips.forEach((c) => row.append(h('button', { type: 'button', class: 'chip', text: c.label, onClick: () => { t = c.t; inp.value = dtLocal(t); paint(); onChange(); } })));
+    inp.addEventListener('input', () => { const v = fromDt(inp.value); if (v === null) return; t = v; paint(); onChange(); });
+    paint();
+    return { el: h('div', { class: 'stack', style: { gap: '8px' } }, chips.length ? row : null, inp), get: () => (Math.abs(t - opened) < 60000 ? Date.now() : t) };
+  }
+
+  // Start a fast from now, or from when the last meal actually ended — the clock and the stages catch up.
+  F.fastSheet = ({ earlier = false, target, onDone } = {}) => {
+    const S = F.store.load(), P = F.data.prog();
+    if (S.activeFast) { location.hash = '#/fuel'; return; }
+    const now = Date.now();
+    const evenings = eveningChips(now);
+    let goal = target || S.settings.fast.targetH || 24;
+    const note = h('div', { class: 'callout small' });
+    const paint = () => {
+      const t = tp.get(), hrs = (Date.now() - t) / 3.6e6;
+      const lands = `${goal} h lands ${when(t + goal * 3.6e6)}.`;
+      const hit = clash(t, Date.now());
+      note.className = 'callout small' + (hrs < 0 || hrs > MAX_H || hit ? ' amber' : hrs >= 0.05 ? ' green' : '');
+      note.textContent = hrs < 0 ? 'That’s in the future — pick when you finished eating.'
+        : hrs > MAX_H ? 'That’s more than 4 days ago. For a fast that’s already over, use “Log a past fast” on the Fuel page.'
+        : hit ? hit
+        : hrs < 0.05 ? `Starts now. ${lands}`
+        : hrs >= goal ? `${hm(hrs)} fasted already — past ${goal} h. Start it, then end it to log it.`
+        : `${hm(hrs)} fasted already · ${stageAt(hrs).cur.icon} ${stageAt(hrs).cur.name}. ${lands}`;
+    };
+    const tp = timePicker(earlier ? evenings.find((c) => new Date(c.t).getHours() === 20).t : now, [{ t: now, label: 'Just now' }].concat(evenings), paint);
+    const sh = sheet(h('div', { class: 'stack' },
+      h('h2', { text: '⏳ Start a fast' }),
+      h('div', { class: 'row between' }, h('span', { class: 'small muted', text: 'Target' }), F.ui.seg([{ v: 24, label: '24 h' }, { v: 36, label: '36 h' }], goal, (v) => { goal = v; paint(); })),
+      h('div', null, h('b', { text: 'When did you finish your last meal?' }), h('div', { class: 'small muted', text: 'Didn’t start the timer at the time? Pick when you stopped eating and the clock catches up.' })),
+      tp.el, note,
+      h('button', { class: 'btn fire big block', onClick: () => {
+        const t = tp.get(), hrs = (Date.now() - t) / 3.6e6, hit = clash(t, Date.now());
+        if (hrs < 0 || hrs > MAX_H || hit) { toast(hrs < 0 ? 'Pick a time in the past' : hit || 'That’s more than 4 days ago', 2800); return; }
+        F.store.startFast(t, goal);
+        F.timer.sfx('go');
+        sh.close();
+        if (hrs >= 0.05) toast(`Fast running — ${hm(hrs)} in already`, 2600);
+        (onDone || (() => F.app.render()))();
+      } }, icon('play', 16), 'Start the fast'),
+      h('div', { class: 'tiny muted', text: P.fastingCaution })));
+    paint();
+  };
 
   F.fastMini = (date) => {
     const S = F.store.load();
@@ -170,8 +239,8 @@
     if (!q || !q.target || q.met) return q && q.met ? h('div', { class: 'small green', text: '⏳ This week’s fast is done.' }) : null;
     const fd = S.settings.fast.day;
     const isDay = F.ui.dow(date) === fd, eve = F.ui.dow(F.ui.addDays(date, 1)) === fd;
-    const msg = isDay ? '⏳ Fast day — if it isn’t running yet, start it after your last meal.' : eve ? '⏳ Fast starts tonight after dinner — through tomorrow evening.' : `⏳ Weekly fast · planned for ${F.ui.DAYS[fd]}`;
-    return h('div', { class: 'row between' }, h('span', { class: 'small', text: msg }), h('a', { class: 'btn xs' + (isDay || eve ? ' primary' : ''), href: '#/fuel', text: isDay || eve ? 'Start' : 'Fasting' }));
+    const msg = isDay ? '⏳ Fast day — not running yet. Started last night? Tap Start and pick the time.' : eve ? '⏳ Fast starts tonight after dinner — through tomorrow evening.' : `⏳ Weekly fast · planned for ${F.ui.DAYS[fd]}`;
+    return h('div', { class: 'row between nowrap' }, h('span', { class: 'small', text: msg }), h('button', { class: 'btn xs' + (isDay || eve ? ' primary' : ''), text: 'Start', onClick: () => F.fastSheet() }));
   };
 
   function fastCard(rerender) {
@@ -182,10 +251,10 @@
       let target = S.settings.fast.targetH || 24;
       card.append(h('div', { class: 'eyebrow', text: '⏳ Weekly fast' }),
         h('div', { class: 'row between' }, h('b', { text: `Target ${target} h · planned for ${F.ui.DAYS[S.settings.fast.day]}s` }), F.ui.seg([{ v: 24, label: '24 h' }, { v: 36, label: '36 h' }], target, (v) => { target = v; })),
-        h('p', { class: 'small muted mt-s', text: 'Start the timer when you finish your last meal. It walks you through what your body is doing hour by hour.' }),
+        h('p', { class: 'small muted mt-s', text: 'Start the timer when you finish your last meal. Forgot to? “I started earlier” sets the clock back to when you stopped eating. It walks you through what your body is doing hour by hour.' }),
         h('div', { class: 'btngroup mt' },
           h('button', { class: 'btn fire', onClick: () => { F.store.startFast(Date.now(), target); F.timer.sfx('go'); rerender(); } }, icon('play', 14), 'Start now'),
-          h('button', { class: 'btn', onClick: () => startedEarlier(target, rerender) }, 'Started earlier…')),
+          h('button', { class: 'btn', onClick: () => F.fastSheet({ earlier: true, target, onDone: rerender }) }, 'I started earlier…')),
         h('div', { class: 'tiny muted mt', text: P.fastingCaution }));
       return card;
     }
@@ -204,36 +273,105 @@
     };
     paint();
     const iv = setInterval(() => { if (!document.body.contains(card)) { clearInterval(iv); return; } paint(); }, 1000);
-    card.append(h('div', { class: 'row between' }, h('div', { class: 'eyebrow', text: `⏳ Fasting since ${when(f.start)}` }), pill(`target ${f.targetH} h`, 'purple')),
+    card.append(h('div', { class: 'row between' }, h('div', { class: 'eyebrow', style: { marginBottom: 0 }, text: `⏳ Fasting since ${when(f.start)}` }),
+        h('div', { class: 'row', style: { gap: '6px' } }, h('button', { class: 'btn xs ghost', onClick: () => fixStart(rerender) }, icon('edit', 13), 'Fix start'), pill(`target ${f.targetH} h`, 'purple'))),
       clock, stagesBar, meta, h('div', { class: 'mt' }, stageBox),
       h('details', { class: 'acc mt' }, h('summary', { text: 'Fasting tips' }), h('div', { class: 'acc-body' }, h('ul', { class: 'cues' }, P.fastingTips.map((t) => h('li', { class: 'small', text: t }))))),
       h('div', { class: 'btngroup mt' }, h('button', { class: 'btn primary', onClick: () => endFast(rerender) }, 'End fast'), h('button', { class: 'btn ghost sm', text: 'Cancel (didn’t count)', onClick: async () => { if (await confirmDlg('Cancel this fast without logging it?', { ok: 'Cancel fast', danger: true })) { F.store.cancelFast(); rerender(); } } })));
     return card;
   }
-  function startedEarlier(target, rerender) {
-    const d = new Date(Date.now() - 2 * 3.6e6);
-    const pad = (n) => String(n).padStart(2, '0');
-    const inp = h('input', { type: 'datetime-local', value: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}` });
-    const sh = sheet(h('div', { class: 'stack' }, h('h2', { text: 'When was your last meal?' }), inp,
-      h('button', { class: 'btn primary', text: 'Start from then', onClick: () => { const t = new Date(inp.value).getTime(); if (!t || t > Date.now()) { toast('Pick a time in the past'); return; } F.store.startFast(t, target); sh.close(); rerender(); } })));
-  }
-  async function endFast(rerender) {
+  // The timer was started late, or from the wrong time.
+  function fixStart(rerender) {
     const f = F.store.load().activeFast;
-    const hrs = (Date.now() - f.start) / 3.6e6;
-    const msg = hrs >= f.targetH ? `You made it — ${hm(hrs)}.` : hrs >= 24 ? `${hm(hrs)} — past the 24-hour mark.` : `${hm(hrs)} logged.`;
-    const sub = hrs >= 24 ? 'Break it with a protein-forward, normal-sized meal.' : hrs >= 16 ? 'Short of 24 h but it still counts (+60 XP). Ending when your body says so is the right call.' : 'Under 16 hours doesn’t earn fast XP, but it’s logged. No harm in stopping.';
-    if (!(await confirmDlg(msg, { ok: 'End fast', sub }))) return;
-    F.store.endFast(Date.now());
-    F.timer.sfx('done');
-    if (hrs >= 24) F.ui.xpFloat(hrs >= 36 ? 200 : 150, '🍗'); else if (hrs >= 16) F.ui.xpFloat(60, '🍗');
-    F.game.afterChange();
-    rerender();
+    if (!f) return;
+    const note = h('div', { class: 'callout small' });
+    const paint = () => {
+      const t = tp.get(), hrs = (Date.now() - t) / 3.6e6, hit = clash(t, Date.now()), ok = hrs >= 0 && hrs <= MAX_H && !hit;
+      note.className = 'callout small' + (ok ? ' green' : ' amber');
+      note.textContent = hrs < 0 ? 'That’s in the future.' : hrs > MAX_H ? 'That’s more than 4 days ago.' : hit ? hit
+        : `${hm(hrs)} fasted · ${stageAt(hrs).cur.icon} ${stageAt(hrs).cur.name}. ${hrs >= f.targetH ? `Already past ${f.targetH} h.` : `${f.targetH} h lands ${when(t + f.targetH * 3.6e6)}.`}`;
+    };
+    const tp = timePicker(f.start, eveningChips(Date.now()), paint);
+    const sh = sheet(h('div', { class: 'stack' },
+      h('h2', { text: 'When did this fast start?' }),
+      h('p', { class: 'small muted', text: 'Set when you actually finished your last meal. The clock and stages follow.' }),
+      tp.el, note,
+      h('button', { class: 'btn primary block', text: 'Save', onClick: () => {
+        const t = tp.get(), hrs = (Date.now() - t) / 3.6e6, hit = clash(t, Date.now());
+        if (hrs < 0 || hrs > MAX_H || hit) { toast(hit || 'Pick a time in the last 4 days', 2800); return; }
+        F.store.setFastStart(t); sh.close(); rerender();
+      } })));
+    paint();
+  }
+  // Ending can be set back too: the meal that broke the fast may have been hours before the timer is stopped.
+  function endFast(rerender) {
+    const f = F.store.load().activeFast;
+    if (!f) return;
+    const note = h('div', { class: 'callout small' });
+    const paint = () => {
+      const hrs = (tp.get() - f.start) / 3.6e6, xp = F.game.fastXP(hrs);
+      note.className = 'callout small' + (hrs <= 0 ? ' amber' : xp ? ' green' : '');
+      note.replaceChildren(h('b', { text: hrs <= 0 ? 'That’s before the fast started.' : hrs >= f.targetH ? `You made it — ${hm(hrs)}.` : hrs >= 24 ? `${hm(hrs)} — past the 24-hour mark.` : `${hm(hrs)} fasted.` }),
+        hrs <= 0 ? '' : ' ' + (hrs >= 24 ? `+${xp} XP. Break it with a protein-forward, normal-sized meal.` : hrs >= 16 ? `Short of 24 h but it still counts (+${xp} XP). Ending when your body says so is the right call.` : 'Under 16 hours doesn’t earn fast XP, but it’s logged. No harm in stopping.'));
+    };
+    const tp = timePicker(Date.now(), [{ t: Date.now(), label: 'Just now' }], paint);
+    const sh = sheet(h('div', { class: 'stack' },
+      h('h2', { text: 'End the fast' }),
+      h('p', { class: 'small muted', text: 'When did you eat? If that was a while ago and the timer kept running, set the time you actually ate.' }),
+      tp.el, note,
+      h('div', { class: 'btngroup' },
+        h('button', { class: 'btn primary', text: 'End fast', onClick: () => {
+          const end = tp.get(), hrs = (end - f.start) / 3.6e6;
+          if (hrs <= 0 || end > Date.now() + 60000) { toast(hrs <= 0 ? 'The end has to be after the start' : 'Pick a time in the past'); return; }
+          F.store.endFast(end);
+          sh.close();
+          F.timer.sfx('done');
+          F.ui.xpFloat(F.game.fastXP(hrs), '🍗');
+          F.game.afterChange();
+          rerender();
+        } }),
+        h('button', { class: 'btn ghost', text: 'Keep going', onClick: () => sh.close() }))));
+    paint();
+  }
+  // A fast that's already over and was never timed.
+  function pastFast(rerender) {
+    const now = Date.now();
+    const eve = eveningChips(now).find((c) => new Date(c.t).getHours() === 20).t;
+    const startIn = h('input', { type: 'datetime-local', value: dtLocal(eve - 24 * 3.6e6), max: dtLocal(now) });
+    const endIn = h('input', { type: 'datetime-local', value: dtLocal(eve), max: dtLocal(now) });
+    const note = h('div', { class: 'callout small' });
+    const read = () => { const a = fromDt(startIn.value), b = fromDt(endIn.value); return { a, b, hrs: a === null || b === null ? null : (b - a) / 3.6e6 }; };
+    const problem = ({ a, b, hrs }) => (hrs === null ? 'Set both times.' : hrs <= 0 ? 'The meal after has to come later than the meal before.' : hrs > MAX_H ? 'That’s more than 4 days — check the dates.' : b > Date.now() + 60000 ? 'The end is in the future — if it’s still going, start the timer instead.' : clash(a, b, true));
+    const paint = () => {
+      const r = read(), bad = problem(r), xp = bad ? 0 : F.game.fastXP(r.hrs);
+      note.className = 'callout small' + (bad ? ' amber' : xp ? ' green' : '');
+      note.textContent = bad || `${hm(r.hrs)} fasted${xp ? ` · +${xp} XP` : ' — under 16 hours earns no fast XP, but it’s logged'}.`;
+    };
+    startIn.addEventListener('input', paint);
+    endIn.addEventListener('input', paint);
+    const sh = sheet(h('div', { class: 'stack' },
+      h('h2', { text: 'Log a past fast' }),
+      h('p', { class: 'small muted', text: 'For a fast that’s already over and was never timed. It counts for the week it started in.' }),
+      h('label', { class: 'field' }, h('span', { text: 'Last meal before it' }), startIn),
+      h('label', { class: 'field' }, h('span', { text: 'First meal after it' }), endIn),
+      note,
+      h('button', { class: 'btn primary block', text: 'Log it', onClick: () => {
+        const r = read(), bad = problem(r);
+        if (bad) { toast(bad, 2600); return; }
+        F.store.addFast(r.a, r.b, r.hrs >= 36 ? 36 : 24);
+        sh.close();
+        F.timer.sfx('done');
+        F.ui.xpFloat(F.game.fastXP(r.hrs), '🍗');
+        F.game.afterChange();
+        rerender();
+      } })));
+    paint();
   }
 
   // ---------- view ----------
   F.views.fuel = (dateArg) => {
     const S = F.store.load();
-    const date = dateArg && /^\d{4}-\d{2}-\d{2}$/.test(dateArg) ? dateArg : F.ui.today();
+    const date = F.ui.dayArg(dateArg);
     const wrap = h('div');
     const rerender = () => F.app.render();
     const C = F.game.compute();
@@ -245,6 +383,8 @@
         h('a', { class: 'iconbtn', href: '#/fuel/' + F.ui.addDays(date, -1), 'aria-label': 'Previous day' }, icon('back')),
         h('span', { class: 'small', style: { minWidth: '92px', textAlign: 'center' }, text: isToday ? 'Today' : F.ui.fmtDate(date) }),
         isToday ? h('span', { style: { width: '36px' } }) : h('a', { class: 'iconbtn', href: '#/fuel/' + F.ui.addDays(date, 1), 'aria-label': 'Next day' }, icon('chevron')))));
+    if (!isToday) wrap.append(h('div', { class: 'callout sky small row between mb' }, h('span', { text: `📅 Food here is saved to ${F.ui.fmtDate(date, { weekday: 'long', month: 'short', day: 'numeric' })}.` }),
+      h('div', { class: 'row', style: { gap: '6px' } }, h('a', { class: 'btn xs', href: '#/day/' + date, text: 'Open that day' }), h('a', { class: 'btn xs primary', href: '#/fuel', text: 'Back to today' }))));
 
     // Totals
     const need = Math.max(0, pT - d.protein);
@@ -273,7 +413,7 @@
     const log = h('div', { class: 'card tight' });
     if (!items.length) log.append(h('div', { class: 'small muted', text: 'Nothing logged yet.' }));
     for (const it of items.slice().reverse()) log.append(h('div', { class: 'foodrow' },
-      h('div', null, h('div', { text: (F.game.tpOf(it) ? '🍪 ' : '') + it.name }), h('div', { class: 'm', text: new Date(it.ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) })),
+      h('div', null, h('div', { text: (F.game.tpOf(it) ? '🍪 ' : '') + it.name }), h('div', { class: 'm', text: F.ui.ymd(new Date(it.ts)) === date ? new Date(it.ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'added ' + F.ui.fmtDate(F.ui.ymd(new Date(it.ts)), { month: 'short', day: 'numeric' }) })),
       h('div', { class: 'm', text: F.foodSummary(it) }),
       h('button', { class: 'btn xs ghost', 'aria-label': 'Remove', onClick: () => { F.store.removeFood(date, it.id); rerender(); } }, icon('x', 14))));
     wrap.append(h('div', { class: 'section-title' }, h('h2', { text: isToday ? 'Today' : F.ui.fmtDate(date) }), h('span', { class: 'small muted', text: `${items.length} item${items.length === 1 ? '' : 's'}` })), log);
@@ -281,6 +421,8 @@
     // Fasting
     wrap.append(h('div', { class: 'section-title' }, h('h2', { text: 'Fasting' })), fastCard(rerender));
     const past = S.fasts.slice(-8).reverse();
+    wrap.append(h('div', { class: 'row between mt' }, h('div', { class: 'eyebrow', style: { marginBottom: 0 }, text: past.length ? 'Recent fasts' : 'Fasted without the timer?' }),
+      h('button', { class: 'btn xs ghost', onClick: () => pastFast(rerender) }, icon('plus', 13), 'Log a past fast')));
     if (past.length) {
       const hist = h('div', { class: 'card tight' });
       for (const x of past) {
@@ -288,7 +430,8 @@
         hist.append(h('div', { class: 'foodrow' }, h('div', { text: F.ui.fmtDate(F.ui.ymd(new Date(x.start))) }), h('div', { class: 'm', text: hm(hrs) + (hrs >= 24 ? ' ✓' : '') }),
           h('button', { class: 'btn xs ghost', 'aria-label': 'Delete', onClick: async () => { if (await confirmDlg('Delete this fast?', { ok: 'Delete', danger: true })) { F.store.removeFast(x.id); rerender(); } } }, icon('x', 14))));
       }
-      wrap.append(h('div', { class: 'eyebrow mt', text: 'Recent fasts' }), hist);
+      hist.classList.add('mt-s');
+      wrap.append(hist);
     }
     return wrap;
   };

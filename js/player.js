@@ -1,6 +1,8 @@
 /* Session player: start/resume, guided logging for every block type, finish sheet, and the XP summary. */
 (() => {
   const { h, icon, toast, sheet, confirmDlg, num, mmss, pill } = F.ui;
+  const LONG = { weekday: 'long', month: 'long', day: 'numeric' };
+  const SHORT = { weekday: 'short', month: 'short', day: 'numeric' };
 
   // ---------- shared bits ----------
   F.flagsRow = (e) => {
@@ -31,23 +33,29 @@
   F.activeMs = (A) => Math.max(0, (A.pausedAt || Date.now()) - A.start - (A.pausedMs || 0));
   const pauseClock = (A) => { if (!A.pausedAt) A.pausedAt = Date.now(); };
   const resumeClock = (A) => { if (A.pausedAt) { A.pausedMs = (A.pausedMs || 0) + (Date.now() - A.pausedAt); A.pausedAt = null; } };
-  function restartClock(A) { A.start = Date.now(); A.pausedMs = 0; A.pausedAt = null; A.lastAct = Date.now(); A.plan.date = F.ui.today(); }
+  function restartClock(A) { A.start = Date.now(); A.pausedMs = 0; A.pausedAt = null; A.lastAct = Date.now(); if (!A.backfill) A.plan.date = F.ui.today(); }
   // Has anything been ticked or logged in this session?
   F.activeProgress = (A) => !!A && A.plan.blocks.some((pb) => (pb.type === 'sets' && pb.items.some((it) => it.sets.some((z) => z.done)))
     || ((pb.type === 'list' || pb.type === 'flow') && pb.items.some((it) => it.done || (it.bubbles && it.bubbles.some(Boolean))))
     || (pb.type === 'circuit' && pb.roundsDone) || (pb.type === 'timer' && pb.done));
 
   // ---------- start / preview ----------
+  // A past date starts the session as a backfill: the same plan, filled in afterwards, with no clock or timers.
   F.startSession = async (id, { date, loc } = {}) => {
     const S = F.store.load();
     date = date || F.ui.today();
+    const backfill = date < F.ui.today();
     if (S.active) {
-      if (S.active.src === id && S.active.plan.date === date) { location.hash = '#/play'; return; }
+      if (S.active.src === id && S.active.plan.date === date) {
+        // Reopened from that day's page once the day has passed: finish it as a fill-in, so it stays on that day.
+        if (backfill && !S.active.backfill) { S.active.backfill = true; F.timer.stopRest(); F.store.saveNow(); }
+        location.hash = '#/play'; return;
+      }
       const ok = await confirmDlg(`${S.active.plan.title} is still in progress.`, { ok: 'Discard it and start', danger: true, sub: 'Or cancel and resume it from Today.' });
       if (!ok) { location.hash = '#/play'; return; }
     }
     try {
-      S.active = { src: id, plan: F.data.buildPlan(id, date, { loc }), start: Date.now(), express: false, lastAct: Date.now(), pausedMs: 0, pausedAt: null };
+      S.active = { src: id, plan: F.data.buildPlan(id, date, { loc }), start: Date.now(), express: false, lastAct: Date.now(), pausedMs: 0, pausedAt: null, backfill };
     } catch (e) { toast(e.message, 3000); return; }
     F.store.saveNow();
     location.hash = '#/play';
@@ -55,10 +63,11 @@
 
   F.previewSession = (id, { date } = {}) => {
     date = date || F.ui.today();
+    const past = date < F.ui.today();
     let plan;
     try { plan = F.data.buildPlan(id, date); } catch (e) { toast(e.message); return; }
     const body = h('div');
-    body.append(h('div', { class: 'eyebrow', text: F.data.loc(plan.loc).icon + ' ' + F.data.loc(plan.loc).label + ' · ~' + plan.est + ' min' }),
+    body.append(h('div', { class: 'eyebrow', text: (past ? '📅 ' + F.ui.fmtDate(date, SHORT) + ' · ' : '') + F.data.loc(plan.loc).icon + ' ' + F.data.loc(plan.loc).label + ' · ~' + plan.est + ' min' }),
       h('h2', { text: plan.icon + ' ' + plan.title }), h('p', { class: 'muted small', text: plan.sub }),
       plan.desc ? h('p', { class: 'small mt-s', text: plan.desc }) : null);
     for (const b of plan.blocks) {
@@ -66,8 +75,39 @@
       body.append(h('div', { class: 'mt' }, h('div', { class: 'eyebrow', text: b.name + (b.core ? '' : ' · optional') }), h('div', { class: 'small', text: b.timer ? (b.timer.label || b.timer.workLabel || '') + (names.length ? ' — ' + names.join(', ') : '') : names.join(' · ') })));
     }
     const sh = sheet(h('div', null, body, h('div', { class: 'btngroup mt' },
-      h('button', { class: 'btn fire big', onClick: () => { sh.close(); F.startSession(id, { date }); } }, icon('play', 16), 'Start'),
+      h('button', { class: 'btn fire big', onClick: () => { sh.close(); F.startSession(id, { date }); } }, icon(past ? 'edit' : 'play', 16), past ? 'Fill in what I did' : 'Start'),
+      h('button', { class: 'btn', onClick: () => { sh.close(); F.logDoneSheet(id, date); } }, icon('check', 15), past ? 'Just mark it done' : 'Already did it'),
       h('button', { class: 'btn ghost', text: 'Close', onClick: () => sh.close() }))));
+  };
+
+  // Did it without the app, or forgot to log it: record the session with its minutes only.
+  F.logDoneSheet = (id, date) => {
+    const today = F.ui.today();
+    date = date || today;
+    let plan;
+    try { plan = F.data.buildPlan(id, date); } catch (e) { toast(e.message); return; }
+    const minIn = F.ui.numIn(plan.est || 30, { step: 1 });
+    const notes = h('textarea', { placeholder: 'Notes (optional)', style: { minHeight: '50px' } });
+    const sh = sheet(h('div', { class: 'stack' },
+      h('div', null, h('div', { class: 'eyebrow', text: date === today ? 'Today' : F.ui.fmtDate(date, LONG) + ' · ' + F.ui.relDay(date) }), h('h2', { text: `${plan.icon} ${plan.title} — done` })),
+      h('p', { class: 'small muted', text: `Logs it with the minutes only. It counts for XP, your streak and the weekly quests. To record sets, weights or times, use “${date === today ? 'Start' : 'Fill in what I did'}” instead.` }),
+      h('label', { class: 'field' }, h('span', { text: 'Minutes' }), minIn), notes,
+      h('button', { class: 'btn fire big block', onClick: () => {
+        const S = F.store.load();
+        const minutes = Math.max(1, Math.round(+minIn.value || plan.est || 30));
+        const rec = { date, tpl: plan.tpl, src: id, title: plan.title, icon: plan.icon, tags: plan.tags, stat: plan.stat, met: plan.met, phase: plan.phase, loc: plan.loc,
+          minutes, kcal: F.game.kcal(plan.met, minutes), entries: [], prs: [], notes: notes.value.trim(), quick: true };
+        const x = F.game.sessionXP(rec);
+        rec.xp = x.xp; rec.split = x.split;
+        F.store.addSession(rec);
+        if (S.active && S.active.src === id && S.active.plan.date === date && !F.activeProgress(S.active)) { S.active = null; F.timer.stopRest(); F.store.save(); }
+        sh.close();
+        F.ui.xpFloat(rec.xp, F.data.stat(plan.stat).icon);
+        F.timer.sfx('pop');
+        toast(`${plan.title} logged · ${F.ui.dur(minutes)}`, 2600, { label: 'Undo', run: () => { F.store.removeSession(rec.id); F.app.render(); } });
+        F.game.afterChange();
+        F.app.render();
+      } }, icon('check', 18), 'Log it')));
   };
 
   // ---------- player ----------
@@ -100,23 +140,32 @@
         clockBtn.title = p ? 'Paused — tap to resume' : 'Tap to pause';
       }
     }
-    paintClock();
-    const iv = setInterval(paintClock, 1000);
-    wrap._cleanup = () => clearInterval(iv);
+    const bf = !!A.backfill;   // filling in a past day: no clock, no timers
+    const home = bf ? '#/day/' + plan.date : '#/';
+    if (!bf) {
+      paintClock();
+      const iv = setInterval(paintClock, 1000);
+      wrap._cleanup = () => clearInterval(iv);
+    }
     const L = F.data.loc(plan.loc);
     wrap.append(h('div', { class: 'player-head' },
-      h('a', { class: 'iconbtn', href: '#/', 'aria-label': 'Back to Today (session stays open)' }, icon('back')),
+      h('a', { class: 'iconbtn', href: home, 'aria-label': bf ? 'Back to that day (this stays open)' : 'Back to Today (session stays open)' }, icon('back')),
       h('div', { class: 't' }, h('b', { text: plan.icon + ' ' + plan.title }), h('small', { class: 'muted', text: `${L.icon} ${L.label} · Phase ${plan.phase}` })),
-      clockBtn,
-      h('button', { class: 'iconbtn', 'aria-label': 'Restart, start over or discard', title: 'Restart, start over or discard', onClick: () => sessionMenu(false) }, icon('restart', 19)),
-      h('button', { class: 'btn sm primary', text: 'Finish', onClick: () => finish() })));
+      bf ? pill('📅 ' + F.ui.fmtDate(plan.date, SHORT), 'sky') : clockBtn,
+      h('button', { class: 'iconbtn', 'aria-label': bf ? 'Start over or discard' : 'Restart, start over or discard', title: bf ? 'Start over or discard' : 'Restart, start over or discard', onClick: () => sessionMenu(false) }, icon(bf ? 'trash' : 'restart', 19)),
+      h('button', { class: 'btn sm primary', text: bf ? 'Save' : 'Finish', onClick: () => finish() })));
 
     // Restart the clock, start over, or throw the session away. Also shown when a session was left open for a while.
     function sessionMenu(stale) {
       const onClock = F.ui.dur(F.activeMs(A) / 60000);
       const since = plan.date !== F.ui.today() ? ` — opened ${F.ui.relDay(plan.date)}` : '';
       const ticked = F.activeProgress(A);
-      const sh = sheet(h('div', { class: 'stack' },
+      const sh = bf ? sheet(h('div', { class: 'stack' },
+        h('h2', { text: 'Logging for ' + F.ui.fmtDate(plan.date, LONG) }),
+        h('p', { class: 'small muted', text: 'Nothing is saved until you press Save.' }),
+        ticked ? h('button', { class: 'btn block', onClick: startOver }, 'Start over — clear what’s ticked') : null,
+        h('button', { class: 'btn danger block', onClick: discard }, icon('trash', 16), 'Discard this session')))
+      : sheet(h('div', { class: 'stack' },
         h('h2', { text: stale ? `Still doing ${plan.title}?` : 'Session timer' }),
         h('p', { class: 'small muted', text: stale
           ? `It’s been open with nothing logged for a while (${onClock} on the clock${since}). Restart the clock so the minutes come out right.`
@@ -130,21 +179,22 @@
       async function startOver() {
         sh.close();
         if (!(await confirmDlg('Clear everything ticked and start fresh?', { ok: 'Start over', danger: true }))) return;
-        F.store.load().active = { src: A.src, plan: F.data.buildPlan(A.src, F.ui.today()), start: Date.now(), express: A.express, lastAct: Date.now(), pausedMs: 0, pausedAt: null };
+        F.store.load().active = { src: A.src, plan: F.data.buildPlan(A.src, bf ? plan.date : F.ui.today()), start: Date.now(), express: A.express, lastAct: Date.now(), pausedMs: 0, pausedAt: null, backfill: bf };
         F.timer.stopRest(); F.store.saveNow(); F.app.render();
       }
       async function discard() {
         sh.close();
         if (!(await confirmDlg(`Discard ${plan.title}?`, { ok: 'Discard', danger: true, sub: 'Nothing from it gets logged.' }))) return;
-        F.store.load().active = null; F.timer.stopRest(); F.store.saveNow(); location.hash = '#/';
+        F.store.load().active = null; F.timer.stopRest(); F.store.saveNow(); location.hash = home;
       }
     }
     // Left open for an hour with nothing logged (or since another day)? Ask before the clock inflates the minutes.
     const idleMin = (Date.now() - (A.lastAct || A.start)) / 60000;
-    if (plan.date !== F.ui.today() || (!A.pausedAt && idleMin > 60)) setTimeout(() => { if (F.store.load().active === A && !document.querySelector('.sheet-back')) sessionMenu(true); }, 300);
-    if (plan.desc) wrap.append(h('div', { class: 'callout mb small', text: plan.desc }));
+    if (!bf && (plan.date !== F.ui.today() || (!A.pausedAt && idleMin > 60))) setTimeout(() => { if (F.store.load().active === A && !document.querySelector('.sheet-back')) sessionMenu(true); }, 300);
+    if (bf) wrap.append(h('div', { class: 'callout sky mb small', text: `📅 Logging for ${F.ui.fmtDate(plan.date, LONG)}. Tick what you did and fill in the numbers — nothing is timed, and you set the minutes when you save.` }));
+    else if (plan.desc) wrap.append(h('div', { class: 'callout mb small', text: plan.desc }));
     const ci = F.store.checkin(plan.date) || {};
-    if (ci.knee >= 1 || ci.back >= 1) wrap.append(h('div', { class: 'callout amber mb small', text: `Adjusted for today's check-in (${[ci.knee >= 1 ? 'knees' : '', ci.back >= 1 ? 'back' : ''].filter(Boolean).join(' & ')}): gentler options are picked first. Stop anything sharp.` }));
+    if (ci.knee >= 1 || ci.back >= 1) wrap.append(h('div', { class: 'callout amber mb small', text: `Adjusted for ${bf ? 'that day’s' : "today's"} check-in (${[ci.knee >= 1 ? 'knees' : '', ci.back >= 1 ? 'back' : ''].filter(Boolean).join(' & ')}): gentler options are picked first. Stop anything sharp.` }));
     if (plan.blocks.some((b) => !b.core)) {
       const cb = h('input', { type: 'checkbox', checked: A.express });
       cb.addEventListener('change', () => { A.express = cb.checked; save(); renderBlocks(); });
@@ -152,7 +202,7 @@
     }
     const blocksEl = h('div');
     wrap.append(blocksEl);
-    wrap.append(h('div', { class: 'mt', style: { marginTop: '22px' } }, h('button', { class: 'btn fire big block', onClick: () => finish() }, icon('check', 18), 'Finish session')));
+    wrap.append(h('div', { class: 'mt', style: { marginTop: '22px' } }, h('button', { class: 'btn fire big block', onClick: () => finish() }, icon('check', 18), bf ? 'Save session' : 'Finish session')));
 
     const blockEls = [];
     function renderBlocks() {
@@ -222,7 +272,7 @@
         h('div', { class: 't' }, h('div', { class: 'name', text: e.name, onClick: () => F.exSheet(e.id) }), h('div', { class: 'meta', text: `${it.sets.length} × ${doseText(e, it)}${slotName ? ' · ' + slotName : ''}` }), F.flagsRow(e)),
         it.alts && it.alts.length > 1 ? h('button', { class: 'btn xs', onClick: () => swap(bi, it) }, icon('swap', 14), 'Swap') : null));
       const tgt = targetText(e, it.target);
-      card.append(h('div', { class: 'target' }, it.last ? h('span', null, 'Last ' + it.last + '  →  ') : null, h('span', null, 'Today ', h('b', { text: tgt })), it.target && it.target.why ? h('span', { text: ' · ' + it.target.why }) : null));
+      card.append(h('div', { class: 'target' }, it.last ? h('span', null, 'Last ' + it.last + '  →  ') : null, h('span', null, bf ? 'Target ' : 'Today ', h('b', { text: tgt })), it.target && it.target.why ? h('span', { text: ' · ' + it.target.why }) : null));
       const setsEl = h('div', { class: 'sets' });
       it.sets.forEach((z, k) => setsEl.append(setRow(e, it, z, k, bi)));
       setsEl.append(h('div', { class: 'row' }, h('button', { class: 'btn xs ghost', onClick: () => { const l = it.sets[it.sets.length - 1] || {}; it.sets.push({ w: l.w ?? null, r: l.r ?? null, s: l.s ?? null, done: false }); save(); refresh(bi); } }, icon('plus', 14), 'Set'),
@@ -239,7 +289,8 @@
       if (e.log === 'wr' || e.log === 'r') ins.append(F.ui.numIn(z.r, { placeholder: 'reps', step: 1, onInput: (v) => { z.r = v; save(); } }), e.log === 'r' ? h('span', { class: 'u', text: 'reps' + (e.side ? '/side' : '') }) : null);
       if (e.log === 'ws') ins.append(h('span', { class: 'u', text: '×' }), F.ui.numIn(z.s, { placeholder: 's', step: 1, onInput: (v) => { z.s = v; save(); } }), h('span', { class: 'u', text: 's' }));
       if (e.log === 'h') {
-        if (z.done) ins.append(h('button', { class: 'holdval', title: 'Edit', onClick: () => editHold(z, bi) }, mmss(z.s || 0)), h('span', { class: 'u', text: e.side ? 'per side' : '' }));
+        if (bf) ins.append(F.ui.numIn(z.s, { placeholder: 's', step: 1, onInput: (v) => { z.s = v; save(); } }), h('span', { class: 'u', text: 's' + (e.side ? ' / side' : '') }));
+        else if (z.done) ins.append(h('button', { class: 'holdval', title: 'Edit', onClick: () => editHold(z, bi) }, mmss(z.s || 0)), h('span', { class: 'u', text: e.side ? 'per side' : '' }));
         else ins.append(h('button', { class: 'holdbtn', onClick: () => F.timer.hold({ title: e.name, target: z.s || (it.target && it.target.s) || 30, pr: bestHold(e.id), side: e.side, onDone: (secs) => { z.s = secs; z.done = true; afterSet(it, bi); } }) }, icon('timer', 16), 'Hold ' + mmss(z.s || 30)));
       }
       const tick = h('button', { class: 'tick' + (z.done ? ' on' : ''), 'aria-label': 'Set done', onClick: () => {
@@ -257,7 +308,7 @@
     }
     function afterSet(it, bi) {
       F.timer.sfx('pop'); F.ui.vibrate(20); save(); refresh(bi);
-      if (it.rest) F.timer.rest(it.sets.some((z) => !z.done) ? it.rest : Math.min(it.rest, 60), it.sets.some((z) => !z.done) ? 'Rest' : 'Next up');
+      if (it.rest && !bf) F.timer.rest(it.sets.some((z) => !z.done) ? it.rest : Math.min(it.rest, 60), it.sets.some((z) => !z.done) ? 'Rest' : 'Next up');
     }
     async function swap(bi, it) {
       const list = it.alts.map(F.data.ex).filter(Boolean);
@@ -282,7 +333,9 @@
       const card = h('div', { class: 'card tight' });
       const live = pb.items.filter((it) => !it.why);
       const secs = live.reduce((a, it) => { const e = F.data.ex(it.ex); return a + (it.secs ? it.secs * (e && e.side ? 2 : 1) : 45); }, 0);
-      if (live.some((it) => !it.done)) card.append(h('button', { class: 'btn fire block mb', onClick: () => startFlow(pb, bi) }, icon('play', 16), `Guided — about ${Math.max(1, Math.round(secs / 60))} min`));
+      if (live.some((it) => !it.done)) card.append(bf
+        ? h('button', { class: 'btn block mb', onClick: () => { for (const it of live) it.done = true; F.timer.sfx('pop'); save(); refresh(bi); } }, icon('check', 16), 'Mark all done')
+        : h('button', { class: 'btn fire block mb', onClick: () => startFlow(pb, bi) }, icon('play', 16), `Guided — about ${Math.max(1, Math.round(secs / 60))} min`));
       for (const it of pb.items) {
         const e = F.data.ex(it.ex);
         const d = it.secs ? mmss(it.secs) + (e && e.side ? ' / side' : '') : it.reps || '';
@@ -309,8 +362,9 @@
       const live = pb.items.filter((it) => !it.why && F.data.ex(it.ex));
       const names = live.map((it) => F.data.ex(it.ex));
       if (names.length > 1) card.append(h('div', { class: 'chips mt-s' }, names.map((e) => h('button', { class: 'chip small', text: e.name, onClick: () => F.exSheet(e.id) }))));
-      if (!pb.done) card.append(h('button', { class: 'btn fire block mt', onClick: () => F.timer.run({ title: plan.title + ' · ' + pb.name, timer: t, cue: t.kind === 'amrap' && names.length ? names.map((e, i) => (live[i].reps || '') + ' ' + e.name).join(' · ') : '', onDone: ({ secs, rounds }) => { pb.done = true; pb.vals.secs = secs; if (t.kind === 'amrap') pb.vals.rounds = rounds; save(); refresh(bi); } }) }, icon('play', 16), 'Start timer'));
-      else card.append(h('div', { class: 'row mt-s' }, pill('Done · ' + mmss(pb.vals.secs || 0), 'green'), h('button', { class: 'btn xs ghost', text: 'Run again', onClick: () => { pb.done = false; save(); refresh(bi); } })));
+      if (!pb.done && bf) card.append(h('button', { class: 'btn block mt', onClick: () => { pb.done = true; F.timer.sfx('pop'); save(); refresh(bi); } }, icon('check', 16), 'Mark done'));
+      else if (!pb.done) card.append(h('button', { class: 'btn fire block mt', onClick: () => F.timer.run({ title: plan.title + ' · ' + pb.name, timer: t, cue: t.kind === 'amrap' && names.length ? names.map((e, i) => (live[i].reps || '') + ' ' + e.name).join(' · ') : '', onDone: ({ secs, rounds }) => { pb.done = true; pb.vals.secs = secs; if (t.kind === 'amrap') pb.vals.rounds = rounds; save(); refresh(bi); } }) }, icon('play', 16), 'Start timer'));
+      else card.append(h('div', { class: 'row mt-s' }, pill(pb.vals.secs ? 'Done · ' + mmss(pb.vals.secs) : 'Done', 'green'), h('button', { class: 'btn xs ghost', text: bf ? 'Undo' : 'Run again', onClick: () => { pb.done = false; save(); refresh(bi); } })));
       const fields = (pb.log || []).slice();
       if (fields.length || !pb.done) {
         const lf = h('div', { class: 'logfields' });
@@ -342,9 +396,9 @@
         const was = pb.roundsDone;
         pb.roundsDone = k <= pb.roundsDone ? k - 1 : k;
         save(); refresh(bi);
-        if (pb.roundsDone > was) { F.timer.sfx('pop'); F.ui.vibrate(20); if (pb.rest) F.timer.rest(pb.rest); }
+        if (pb.roundsDone > was) { F.timer.sfx('pop'); F.ui.vibrate(20); if (pb.rest && !bf) F.timer.rest(pb.rest); }
       } }));
-      card.append(h('div', { class: 'row between mt-s' }, h('span', { class: 'small muted', text: `Tap each round as you finish it · target ${pb.target}` + (pb.lastRounds ? ` (last time ${pb.lastRounds} + 1)` : '') + (pb.capped ? ` · Phase ${plan.phase} cap ${pb.max}` : '') }), h('span', { class: 'num', style: { fontSize: '1.4rem', fontWeight: 700 }, text: pb.roundsDone + ' / ' + pb.target })));
+      card.append(h('div', { class: 'row between mt-s' }, h('span', { class: 'small muted', text: `${bf ? 'Tap the rounds you finished' : 'Tap each round as you finish it'} · target ${pb.target}` + (pb.lastRounds ? ` (last time ${pb.lastRounds} + 1)` : '') + (pb.capped ? ` · Phase ${plan.phase} cap ${pb.max}` : '') }), h('span', { class: 'num', style: { fontSize: '1.4rem', fontWeight: 700 }, text: pb.roundsDone + ' / ' + pb.target })));
       card.append(grid);
       return card;
     }
@@ -359,8 +413,8 @@
       const P = F.store.load().profile;
       const raw = Math.max(1, Math.round(F.activeMs(A) / 60000));
       const est = plan.est || 30;
-      const tooLong = raw > Math.max(est * 2.5, est + 45);
-      const mins = tooLong ? est : raw;
+      const tooLong = !bf && raw > Math.max(est * 2.5, est + 45);
+      const mins = bf || tooLong ? est : raw;
       const minIn = F.ui.numIn(mins, { step: 1 });
       let rpe = null, knee = 0, back = 0;
       const checks = {};
@@ -368,7 +422,8 @@
       const rpeOpts = Array.from({ length: 10 }, (_, i) => ({ v: i + 1, label: String(i + 1) }));
       const painOpts = [{ v: 0, label: 'Fine' }, { v: 1, label: 'Achy' }, { v: 2, label: 'Sharp / catching' }];
       const sh = sheet(h('div', { class: 'stack' },
-        h('h2', { text: 'Finish ' + plan.title }),
+        h('h2', { text: (bf ? 'Save ' : 'Finish ') + plan.title }),
+        bf ? h('div', { class: 'callout sky small', text: `Saves to ${F.ui.fmtDate(plan.date, LONG)}. Set roughly how long it took.` }) : null,
         !anyDone() ? h('div', { class: 'callout amber small', text: "Nothing is ticked yet — it'll still be logged as a session with the minutes below." }) : null,
         tooLong ? h('div', { class: 'callout amber small', text: `The clock says ${F.ui.dur(raw)} — it looks like it was left running, so this uses the usual ${est} min. Change it if that’s wrong.` }) : null,
         h('label', { class: 'field' }, h('span', { text: 'Minutes' }), minIn),
@@ -379,7 +434,7 @@
         notes,
         h('div', { class: 'btngroup' },
           h('button', { class: 'btn fire big', onClick: () => { sh.close(); commit(Math.max(1, +minIn.value || mins), { rpe, pain: { knee, back }, checks, notes: notes.value.trim() }); } }, icon('check', 18), 'Save session'),
-          h('button', { class: 'btn danger', text: 'Discard', onClick: async () => { sh.close(); if (await confirmDlg('Discard this session?', { ok: 'Discard', danger: true })) { F.store.load().active = null; F.timer.stopRest(); F.store.saveNow(); location.hash = '#/'; } } }))));
+          h('button', { class: 'btn danger', text: 'Discard', onClick: async () => { sh.close(); if (await confirmDlg('Discard this session?', { ok: 'Discard', danger: true })) { F.store.load().active = null; F.timer.stopRest(); F.store.saveNow(); location.hash = home; } } }))));
     }
     function commit(minutes, extra) {
       const entries = [];
@@ -430,11 +485,12 @@
     const rec = S.sessions.find((x) => x.id === id);
     if (!rec) return h('div', { class: 'empty' }, 'Session not found. ', h('a', { href: '#/', text: 'Today' }));
     const C = F.game.compute();
+    const past = rec.date !== F.ui.today();
     const wrap = h('div', { class: 'stack' });
     const xpEl = h('div', { class: 'summary-xp', text: '+0' });
-    wrap.append(h('div', { class: 'hero center' },
+    wrap.append(h('div', { class: 'hero center' + (past ? ' past' : '') },
       h('div', { style: { fontSize: '3rem' }, text: rec.icon || '🔥' }),
-      h('div', { class: 'eyebrow', text: 'Session complete' }),
+      h('div', { class: 'eyebrow', text: past ? 'Logged for ' + F.ui.fmtDate(rec.date, LONG) : 'Session complete' }),
       h('h1', { text: rec.title }),
       xpEl,
       h('div', { class: 'muted small', text: `${F.ui.dur(rec.minutes)} · ≈ ${num(rec.kcal)} kcal (${num(rec.kcal / F.game.COOKIE_KCAL, 1)} cookies' worth 🍪)` })));
@@ -473,13 +529,15 @@
       wrap.append(h('div', { class: 'callout red' }, h('b', { text: 'Sharp pain logged. ' }), 'Tomorrow, check in honestly and Forge will swap in a recovery day. A knee that stays locked (won’t straighten): don’t force it — see a doctor the same or next day. Catching, giving way, new swelling, or pain/numbness travelling down a leg: call your PT. ', h('a', { href: '#/settings/safety', text: 'Safety guide' })));
     }
 
-    const W = C.thisWeek;
+    const W = C.weeks[F.ui.weekStart(rec.date)] || C.thisWeek;
     if (W) {
       const wq = h('div', { class: 'wq' });
       for (const q of W.list) if (q.target > 0 && ['count', 'days'].includes(q.kind)) wq.append(h('div', { class: 'w' + (q.met ? ' met' : '') }, h('div', { class: 'top' }, h('span', { text: q.icon + ' ' + q.label })), h('div', { class: 'val', text: `${Math.min(q.done, 99)}` }, h('small', { text: ' / ' + q.target }))));
-      wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: 'This week' })), wq));
+      wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: W === C.thisWeek ? 'This week' : 'That week' })), wq));
     }
-    wrap.append(h('div', { class: 'btngroup mt' }, h('a', { class: 'btn fire big', href: '#/' }, 'Back to Today'), h('a', { class: 'btn', href: '#/train/history' }, 'History')));
+    wrap.append(h('div', { class: 'btngroup mt' },
+      past ? h('a', { class: 'btn fire big', href: '#/day/' + rec.date }, 'Back to ' + F.ui.fmtDate(rec.date, SHORT)) : null,
+      h('a', { class: 'btn ' + (past ? '' : 'fire big'), href: '#/' }, past ? 'Today' : 'Back to Today'), h('a', { class: 'btn', href: '#/train/history' }, 'History')));
     setTimeout(() => F.game.afterChange(), 900);
     return wrap;
   };

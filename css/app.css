@@ -225,6 +225,27 @@ details.acc > .acc-body { padding: 0 14px 14px; }
 .locbar button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: var(--bg3); border: 1px solid var(--border); font-size: 0.83rem; color: var(--muted); }
 .locbar button.on { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .locbar button.trip.on { background: var(--sky-dim); border-color: var(--sky); color: var(--sky); }
+/* The last seven days; tap one to catch up on it. A past day's page is tinted sky so it never reads as today. */
+.daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.ds-day { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 2px 6px; border-radius: 12px; background: var(--bg2); border: 1px solid var(--border); color: var(--muted); min-width: 0; }
+.ds-day:hover { border-color: var(--border2); }
+.ds-day small { font-size: 0.64rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; }
+.ds-day b { font-family: var(--display); font-size: 1.3rem; font-weight: 700; line-height: 1.05; color: var(--text); }
+.ds-day i { font-style: normal; font-family: var(--display); font-weight: 700; font-size: 0.8rem; line-height: 1.15; min-height: 0.95rem; white-space: nowrap; }
+.ds-day.done { border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
+.ds-day.done i { color: var(--accent2); }
+.ds-day.frozen { border-color: color-mix(in srgb, var(--sky) 38%, transparent); }
+.ds-day.miss { border-style: dashed; border-color: var(--border2); }
+.ds-day.miss b, .ds-day.pre b { color: var(--muted); }
+.ds-day.pre { opacity: 0.45; }
+.ds-day.today small { color: var(--accent); }
+.ds-day.sel { background: var(--sky-dim); border: 1px solid var(--sky); }
+.ds-day.sel b, .ds-day.sel small { color: var(--sky); }
+.ds-day.sel.today { background: var(--accent-dim); border-color: var(--accent); }
+.ds-day.sel.today b, .ds-day.sel.today small { color: var(--accent); }
+.hero.past { background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--sky) 20%, transparent), transparent 55%), var(--bg2); border-color: color-mix(in srgb, var(--sky) 40%, transparent); }
+.hero.past .greet { color: var(--sky); font-weight: 600; }
+input.dayjump { width: auto; padding: 5px 9px; font-size: 0.83rem; border-radius: 9px; }
 .checkin { display: grid; gap: 10px; }
 .checkin .ci-row { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 10px; }
 .checkin .ci-row > span { font-size: 0.85rem; color: var(--muted); font-weight: 600; }

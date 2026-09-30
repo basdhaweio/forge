@@ -7,10 +7,10 @@
   const toDisp = (kind, v) => (kind === 'w' ? F.u.wv(v) : kind === 'l' ? F.u.lv(v) : v);
   const fromDisp = (kind, v) => (v === null || v === '' ? null : kind === 'w' ? F.u.wIn(+v) : kind === 'l' ? F.u.lIn(+v) : +v);
 
-  F.measureSheet = (existing) => {
+  F.measureSheet = (existing, { date } = {}) => {
     const S = F.store.load(), P = F.data.prog();
     const last = S.measurements[S.measurements.length - 1];
-    const m = existing ? JSON.parse(JSON.stringify(existing)) : { date: F.ui.today(), sites: {} };
+    const m = existing ? JSON.parse(JSON.stringify(existing)) : { date: date || F.ui.today(), sites: {} };
     m.sites = m.sites || {};
     const used = new Set(S.measurements.flatMap((x) => Object.keys(x.sites || {})).concat(S.measurements.some((x) => x.bf) ? ['bf'] : []));
     const dateIn = h('input', { type: 'date', value: m.date, max: F.ui.today() });

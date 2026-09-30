@@ -110,12 +110,21 @@ F.store = (() => {
   function removeCustomFood(id) { data.foods = data.foods.filter((x) => x.id !== id); tomb('foods', id); save(); }
 
   // ---- fasts ----
+  const byStart = (a, b) => (a.start || 0) - (b.start || 0);
   function startFast(start, targetH) { load().activeFast = { start, targetH }; data.activeFastU = Date.now(); touch(); save(); }
   function endFast(end) {
     const f = load().activeFast;
     if (!f) return null;
     const rec = { id: F.ui.uid(), start: f.start, end, targetH: f.targetH, ts: Date.now() };
-    data.fasts.push(rec); data.activeFast = null; data.activeFastU = Date.now(); touch(); save();
+    data.fasts.push(rec); data.fasts.sort(byStart); data.activeFast = null; data.activeFastU = Date.now(); touch(); save();
+    return rec;
+  }
+  // The timer was started late (or with the wrong time): move the start of the running fast.
+  function setFastStart(start) { const f = load().activeFast; if (!f) return; f.start = start; data.activeFastU = Date.now(); touch(); save(); }
+  // A fast that was finished but never timed.
+  function addFast(start, end, targetH) {
+    const rec = { id: F.ui.uid(), start, end, targetH: targetH || 24, ts: Date.now() };
+    load().fasts.push(rec); data.fasts.sort(byStart); touch(); save();
     return rec;
   }
   function cancelFast() { load().activeFast = null; data.activeFastU = Date.now(); touch(); save(); }
@@ -181,7 +190,7 @@ F.store = (() => {
     for (const kind of Object.keys(d.deleted)) for (const [id, t] of Object.entries(d.deleted[kind])) if (t < cutoff) delete d.deleted[kind][id];
     d.sessions = mergeList(d.sessions, inc.sessions, 'sessions', d.deleted); sortSessions();
     d.measurements = mergeList(d.measurements, inc.measurements, 'measurements', d.deleted).sort(byDate);
-    d.fasts = mergeList(d.fasts, inc.fasts, 'fasts', d.deleted).sort((a, b) => (a.start || 0) - (b.start || 0));
+    d.fasts = mergeList(d.fasts, inc.fasts, 'fasts', d.deleted).sort(byStart);
     d.foods = mergeList(d.foods, inc.foods, 'foods', d.deleted);
     for (const date of new Set([...Object.keys(d.food), ...Object.keys(inc.food || {})])) {
       const list = mergeList(d.food[date], (inc.food || {})[date], 'food', d.deleted).sort((a, b) => (a.ts || 0) - (b.ts || 0));
@@ -226,7 +235,7 @@ F.store = (() => {
 
   return { load, save, saveNow, rev: () => rev, onChange, addSession, updateSession, removeSession, sessionsOn,
     day, checkin, setCheckin, foodOn, addFood, removeFood, addCustomFood, updateCustomFood, removeCustomFood,
-    startFast, endFast, cancelFast, removeFast, addMeasurement, updateMeasurement, removeMeasurement,
+    startFast, endFast, cancelFast, removeFast, setFastStart, addFast, addMeasurement, updateMeasurement, removeMeasurement,
     isTravel, startTrip, endTrip, location, setLocation, merge, snapshot, digest, exportJSON, importJSON, reset };
 })();
 

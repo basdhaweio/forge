@@ -102,6 +102,8 @@ This is how Forge builds each day and week, written so a physical therapist can 
   - 24 h deep fast (autophagy is flagged as uncertain in humans)
   - 36 h top of the range
 
+  The timer can be started late: set when the last meal ended and the clock and stages catch up. A fast counts toward the week it started in.
+
   XP is fixed for 24 h and 36 h; nothing extra is earned for going longer. Ending early is framed as a good call, and 16 h+ still earns a little XP. Don't fast on diabetes medication, when underweight or unwell, or with a history of disordered eating.
 
 ## Gamification
@@ -114,3 +116,4 @@ This is how Forge builds each day and week, written so a physical therapist can 
 - **Levels:** level *n* needs 100 × (*n*−1)² XP.
 - **Stats:** STR, END, AGI, MOB, GRIT, ARMOR and FUEL level up from the work that trains them.
 - **Streak:** any logged session (PT included) makes a day active. Every 7 active days banks a freeze (up to 2), and a missed day spends a freeze instead of breaking the streak. There is a "Comeback" achievement for returning after a break.
+- **Catching up:** everything is derived from the log, so a day filled in afterwards counts as if it had been logged at the time. It goes back into the streak, returns a freeze that was spent on it, and counts toward that week's quests.

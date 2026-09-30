@@ -22,6 +22,7 @@ F.app = (() => {
     try {
       switch (seg[0]) {
         case undefined: case '': el = F.views.today(); nav = 'today'; break;
+        case 'day': el = F.views.today(seg[1]); nav = 'today'; break;
         case 'train': el = F.views.train(seg[1]); break;
         case 'fuel': el = F.views.fuel(seg[1]); break;
         case 'body': el = F.views.body(); break;
@@ -45,6 +46,12 @@ F.app = (() => {
     if (same) window.scrollTo(0, y); else window.scrollTo(0, 0);
     lastHash = location.hash;
     chrome();
+  }
+
+  // The day on screen: a past day opened from Today or Fuel, else today. The quick-log sheets default to it.
+  function viewDate() {
+    const { seg } = parse();
+    return seg[0] === 'day' || seg[0] === 'fuel' ? F.ui.dayArg(seg[1]) : F.ui.today();
   }
 
   function chrome() {
@@ -94,8 +101,16 @@ F.app = (() => {
     render();
     if (S.profile.onboarded) setTimeout(() => F.game.afterChange(), 700);
     F.sync.start();
-    // New day while the app sits open: refresh Today.
-    setInterval(() => { const d = F.ui.today(); if (d !== lastDay) { lastDay = d; if (!location.hash || location.hash === '#/') render(); else chrome(); } }, 60000);
+    // New day while the app sits open (or comes back from the background): refresh the pages that depend on the date.
+    const rollover = () => {
+      const d = F.ui.today();
+      if (d === lastDay) return;
+      lastDay = d;
+      const { seg } = parse();
+      if (!seg[0] || seg[0] === 'day' || seg[0] === 'fuel') render(); else chrome();
+    };
+    setInterval(rollover, 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) rollover(); });
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     // No service worker on localhost (it serves stale scripts while developing) unless ?sw is in the URL.
     const devHost = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && !/[?&]sw\b/.test(location.search);
@@ -114,5 +129,5 @@ F.app = (() => {
   }
 
   setTimeout(boot, 0);
-  return { VERSION, render, chrome, theme, installPrompt: null };
+  return { VERSION, render, chrome, theme, viewDate, installPrompt: null };
 })();

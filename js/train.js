@@ -164,7 +164,7 @@
       }
       box.append(h('div', { class: 'item', onClick: () => detail(s) },
         h('span', { class: 'emo', text: s.icon || '•' }),
-        h('div', { class: 't' }, h('b', { text: s.title }), h('small', { text: [F.ui.dur(s.minutes), s.dist ? F.u.d(s.dist) : null, s.rounds ? s.rounds + ' rounds' : null, s.auto ? 'quick tick' : null].filter(Boolean).join(' · ') })),
+        h('div', { class: 't' }, h('b', { text: s.title }), h('small', { text: [F.ui.dur(s.minutes), s.dist ? F.u.d(s.dist) : null, s.rounds ? s.rounds + ' rounds' : null, s.auto ? 'quick tick' : s.quick ? 'marked done' : null].filter(Boolean).join(' · ') })),
         s.prs && s.prs.length ? pill('🎉 ' + s.prs.length + ' PR', 'amber') : null,
         h('span', { class: 'pill xp', text: '+' + num(s.xp || 0) })));
     }

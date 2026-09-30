@@ -73,6 +73,7 @@ F.ui = (() => {
     download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     restart: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/>',
     upload: '<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>',
+    calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
   };
   function icon(name, size = 20) {
     const el = document.createElementNS(SVGNS, 'svg');
@@ -155,6 +156,9 @@ F.ui = (() => {
   function weekStart(ds) { const d = parse(ds); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); }
   function daysBetween(a, b) { return Math.round((parse(b) - parse(a)) / 86400000); }
   function fmtDate(ds, opts) { return parse(ds).toLocaleDateString(undefined, opts || { weekday: 'short', month: 'short', day: 'numeric' }); }
+  const isDate = (ds) => typeof ds === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ds) && !isNaN(parse(ds)) && ymd(parse(ds)) === ds;
+  // A day to view or log for: a real date that isn't in the future, else today.
+  function dayArg(ds) { const t = today(); return isDate(ds) && ds <= t ? ds : t; }
   function relDay(ds) {
     const n = daysBetween(today(), ds);
     return n === 0 ? 'today' : n === -1 ? 'yesterday' : n === 1 ? 'tomorrow' : n < 0 ? `${-n} days ago` : `in ${n} days`;
@@ -306,7 +310,7 @@ F.ui = (() => {
   }
 
   return { h, s, append, icon, toast, xpFloat, sheet, confirmDlg, chip, pill, seg, progress, vibrate,
-    ymd, today, parse, addDays, dow, weekStart, daysBetween, fmtDate, relDay, DAYS,
+    ymd, today, parse, addDays, dow, weekStart, daysBetween, fmtDate, relDay, isDate, dayArg, DAYS,
     num, compact, mmss, hms, dur, range, uid, shuffle, numIn,
     ring, sparkline, lineChart, heatmap, confetti, celebrate, countUp };
 })();

@@ -240,10 +240,13 @@ F.data = (() => {
     const bm = st.prog.benchmark;
     if (bm && F.ui.parse(date).getDate() <= 7) ids = ids.map((x) => (x === bm.replace ? bm.with : x));
     const c = ctx(date);
-    // Gym day: the strength session becomes the next gym session (A/B, whichever was done longer ago).
+    // Gym day: the strength session becomes the next gym session (A/B, whichever was done longer ago before this day).
+    // Once one is logged on the day, that's the day's gym session — it shows as done instead of offering the other.
     if (c.loc === 'gym') {
-      const lastDone = (tid) => { const ss = S.sessions; for (let i = ss.length - 1; i >= 0; i--) if (ss[i].tpl === tid) return ss[i].date; return ''; };
-      const next = lastDone('gymA') <= lastDone('gymB') ? 'gymA' : 'gymB';
+      const gym = (x) => x.tpl === 'gymA' || x.tpl === 'gymB';
+      const onDay = S.sessions.find((x) => x.date === date && gym(x));
+      const lastDone = (tid) => { const ss = S.sessions; for (let i = ss.length - 1; i >= 0; i--) if (ss[i].tpl === tid && ss[i].date < date) return ss[i].date; return ''; };
+      const next = onDay ? onDay.tpl : lastDone('gymA') <= lastDone('gymB') ? 'gymA' : 'gymB';
       let swapped = false;
       ids = ids.map((x) => { const t = st.sess[x]; if (!swapped && t && (t.tags || []).includes('lift')) { swapped = true; return next; } return x; });
       if (!swapped) ids.unshift(next);
