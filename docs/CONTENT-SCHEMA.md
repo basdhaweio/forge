@@ -49,6 +49,6 @@ Filter rules (`blocked()` in `js/data.js`):
   - `core: true` keeps a block in "short on time" mode.
   - `requires: [equipment ids]` on a block skips it when the kit lacks one (`"a|b"` means either). Example: the Krav heavy-bag rounds need `bag`.
 - `schedule`: weekday (`"0"` = Sunday) → session ids. The first Murph day of each month becomes `benchmark.with`.
-- `dailyTasks`, `quotas` (with `home` / `travel` targets), `activities` (quick log), `achievements`, `quests`.
+- `dailyTasks`, `quotas` (with `home` / `travel` targets), `activities` (quick log), `achievements`, `quests`. A daily task with `fastOff: true` is switched off on a fast day (a fast covering 12 hours or more of it).
 - Metric names are listed in `tools/validate.py` (`METRIC`) and implemented in `metric()` in `js/game.js`: `count:<tag>`, `holdBest:<ex>`, `e1rmBw:<ex>`, `carryPct:<ex>:<secs>`, `distBest:<activity>`, …
 - `fastingStages`, `fastingTips`, `fastingCaution`, `foods`, `treats`, `measureSites`, `safety`.

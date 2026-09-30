@@ -449,12 +449,14 @@
     if (!isToday) wrap.append(h('div', { class: 'callout sky small row between mb' }, h('span', { text: `📅 Food and water here are saved to ${F.ui.fmtDate(date, { weekday: 'long', month: 'short', day: 'numeric' })}.` }),
       h('div', { class: 'row', style: { gap: '6px' } }, h('a', { class: 'btn xs', href: '#/day/' + date, text: 'Open that day' }), h('a', { class: 'btn xs primary', href: '#/fuel', text: 'Back to today' }))));
 
-    // Totals
-    const need = Math.max(0, pT - d.protein);
+    // Totals. On a fast day there is no protein target.
+    const need = Math.max(0, pT - d.protein), fastDay = F.game.fastDay(date);
     wrap.append(h('div', { class: 'card' }, h('div', { class: 'fuelsnap' },
-      F.ui.ring(d.protein / pT, { size: 116, stroke: 11, label: num(d.protein), sub: `/ ${pT} g protein` }),
+      F.ui.ring(d.protein / pT, { size: 116, stroke: 11, label: num(d.protein), sub: fastDay ? 'fast day' : `/ ${pT} g protein`, color: fastDay ? 'var(--purple)' : undefined }),
       h('div', { class: 'stack', style: { gap: '8px' } },
-        h('div', null, h('b', { text: need ? `${num(need)} g protein to go` : 'Protein target hit 💪' }), h('div', { class: 'small muted', text: need ? `≈ ${num(need / 24, 1)} scoops of whey, or ${num(need / 30, 1)} palm-sized portions of meat or fish` : 'Muscle has what it needs to grow.' })),
+        fastDay
+          ? h('div', null, h('b', { text: '⏳ Fast day — no protein target' }), h('div', { class: 'small muted', text: 'Hit protein and Log food are off for the day. Water still counts, and anything you log still shows here.' }))
+          : h('div', null, h('b', { text: need ? `${num(need)} g protein to go` : 'Protein target hit 💪' }), h('div', { class: 'small muted', text: need ? `≈ ${num(need / 24, 1)} scoops of whey, or ${num(need / 30, 1)} palm-sized portions of meat or fish` : 'Muscle has what it needs to grow.' })),
         h('div', { class: 'small' }, '🍪 Treats: ', h('b', { text: F.fmtTreats(d.treats || 0) }), h('span', { class: 'muted', text: isToday ? ' today' : '' })),
         S.settings.nutrition.trackKcal ? h('div', { class: 'small' }, '🔥 Calories: ', h('b', { text: '≈ ' + num(d.kcalIn) }), h('span', { class: 'muted', text: kT ? ` / ${num(kT)} target` : ' eaten' }), h('span', { class: 'muted', text: ` · ≈ ${num(d.kcal)} burned training` })) : null))));
 

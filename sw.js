@@ -1,5 +1,5 @@
 /* Forge service worker: app shell cached, program JSON network-first. */
-const VERSION = 'forge-v9';
+const VERSION = 'forge-v10';
 const SHELL = [
   './', './index.html', './manifest.json', './css/app.css',
   './js/ui.js', './js/store.js', './js/data.js', './js/game.js', './js/timer.js', './js/player.js',

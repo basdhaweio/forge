@@ -116,11 +116,25 @@ F.game = (() => {
     return { name, now: f(p.value), prev: f(p.prev) };
   }
 
+  // ---------- fast days ----------
+  // A day spent mostly fasting: a logged fast, or the running one through its target, covers 12 hours or more of it.
+  // Quests marked fastOff (protein, food log) are off that day, and the week's protein-days target drops by one.
+  function fastDay(date) {
+    const S = F.store.load();
+    const a = F.ui.parse(date).getTime(), b = F.ui.parse(F.ui.addDays(date, 1)).getTime();
+    let ms = 0;
+    const cover = (s, e) => { ms += Math.max(0, Math.min(e, b) - Math.max(s, a)); };
+    for (const f of S.fasts) cover(f.start, f.end);
+    if (S.activeFast) cover(S.activeFast.start, Math.max(Date.now(), S.activeFast.start + S.activeFast.targetH * 3.6e6));
+    return ms >= 12 * 3.6e6;
+  }
+  const dailyTasksOn = (date) => { const fast = fastDay(date); return F.data.prog().dailyTasks.filter((t) => !(fast && t.fastOff)); };
+
   // ---------- daily tasks ----------
   function tasksDoneFor(date, d, S, proteinT, walkT, waterT) {
     const out = new Set();
     const cover = S.settings.formalPtCovers || {};
-    for (const t of F.data.prog().dailyTasks) {
+    for (const t of dailyTasksOn(date)) {
       if (t.kind === 'checkin') { if (S.days[date] && S.days[date].checkin) out.add(t.id); }
       else if (!d) continue;
       else if (t.kind === 'session') { if (t.tags.some((g) => d.tags.has(g)) || (cover[t.id] && d.tags.has('formalpt'))) out.add(t.id); }
@@ -138,6 +152,7 @@ F.game = (() => {
     const dates = Array.from({ length: 7 }, (_, i) => F.ui.addDays(ws, i));
     const end = dates[6];
     const travelDays = dates.filter((d) => F.store.isTravel(d)).length;
+    const fastDays = dates.filter((d) => fastDay(d)).length;
     const homeFrac = (7 - travelDays) / 7;
     const sess = S.sessions.filter((x) => x.date >= ws && x.date <= end);
     const proteinT = proteinTarget(), budget = treatBudget();
@@ -146,7 +161,8 @@ F.game = (() => {
     for (const q of P.quotas) {
       const o = (S.settings.quotas || {})[q.id] || {};
       const home = o.home ?? q.home, trav = o.travel ?? q.travel;
-      const target = Math.round(home * homeFrac + trav * (1 - homeFrac));
+      let target = Math.round(home * homeFrac + trav * (1 - homeFrac));
+      if (q.kind === 'protein') target = Math.max(0, target - fastDays);   // no protein target on a fast day
       let done = 0, extra = null;
       const tagged = (tag) => sess.filter((x) => (x.tags || []).includes(tag));
       if (q.kind === 'count') done = tagged(q.tag).filter((x) => !q.minMin || (x.minutes || 0) >= q.minMin).length;
@@ -166,7 +182,7 @@ F.game = (() => {
       list.push({ id: q.id, label: q.label, icon: q.icon, kind: q.kind, target, done, met: target > 0 && done >= target, extra, stat: QSTAT[q.id] });
     }
     const act = list.filter((q) => q.target > 0);
-    return { ws, end, list, travelDays, perfect: act.length > 0 && act.every((q) => q.met), realSessions: sess.filter((x) => !x.auto).length, closed: end < today };
+    return { ws, end, list, travelDays, fastDays, perfect: act.length > 0 && act.every((q) => q.met), realSessions: sess.filter((x) => !x.auto).length, closed: end < today };
   }
 
   // ---------- the big derivation ----------
@@ -454,5 +470,5 @@ F.game = (() => {
   }
 
   return { compute, afterChange, sessionXP, detectPRs, prText, weekQuotas, metricText, levelInfo, statInfo, titleFor,
-    weightLb, kcal, age, hrMax, proteinTarget, treatBudget, waterTarget, waterAuto, waterMet, tpOf, bmr, suggestKcal, e1rm, fastXP, COOKIE_KCAL, QSTAT };
+    fastDay, dailyTasksOn, weightLb, kcal, age, hrMax, proteinTarget, treatBudget, waterTarget, waterAuto, waterMet, tpOf, bmr, suggestKcal, e1rm, fastXP, COOKIE_KCAL, QSTAT };
 })();

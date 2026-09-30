@@ -106,6 +106,8 @@ This is how Forge builds each day and week, written so a physical therapist can 
 
   The timer can be started late: set when the last meal ended and the clock and stages catch up. A fast counts toward the week it started in.
 
+  On a fast day (a fast covers 12 hours or more of it, counting the running fast through its target), Hit protein and Log food are off, and that week's protein-days target drops by one. Water still counts.
+
   XP is fixed for 24 h and 36 h; nothing extra is earned for going longer. Ending early is framed as a good call, and 16 h+ still earns a little XP. Don't fast on diabetes medication, when underweight or unwell, or with a history of disordered eating.
 
 ## Gamification

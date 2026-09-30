@@ -327,9 +327,9 @@
     {"id": "holds", "label": "Daily holds", "icon": "⏱️", "xp": 25, "kind": "session", "session": "holds", "tags": ["holds"], "stat": "GRIT", "min": 6},
     {"id": "mobility", "label": "Roll & stretch", "sub": "or any yoga", "icon": "🌀", "xp": 25, "kind": "session", "session": "mobility", "tags": ["mobility", "yoga"], "stat": "MOB", "min": 10},
     {"id": "walk", "label": "Walk", "icon": "🚶", "xp": 20, "kind": "walk", "stat": "END"},
-    {"id": "protein", "label": "Hit protein", "icon": "🍗", "xp": 30, "kind": "protein", "stat": "FUEL"},
+    {"id": "protein", "label": "Hit protein", "icon": "🍗", "xp": 30, "kind": "protein", "stat": "FUEL", "fastOff": true},
     {"id": "water", "label": "Drink water", "icon": "💧", "xp": 15, "kind": "water", "stat": "FUEL"},
-    {"id": "food", "label": "Log food", "icon": "📝", "xp": 10, "kind": "food", "stat": "FUEL"}
+    {"id": "food", "label": "Log food", "icon": "📝", "xp": 10, "kind": "food", "stat": "FUEL", "fastOff": true}
   ],
 
   "quotas": [

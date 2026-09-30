@@ -352,6 +352,8 @@
     wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: 'Mission' }), h('button', { class: 'btn xs ghost', onClick: () => pickSession(D()) }, icon('swap', 14), past ? 'Did something else' : 'Do something else')), missions));
 
     // ----- daily quests -----
+    // On a fast day the protein and food-log quests are off.
+    const fastToday = F.game.fastDay(date), tasks = F.game.dailyTasksOn(date);
     const dayRec = C.days[date] || {};
     const tdone = dayRec.tasks || new Set();
     const ql = h('div', { class: 'card tight quests' });
@@ -383,7 +385,7 @@
       water: `${F.u.volN(water)} / ${F.u.volN(waterT)} ${F.u.vu()}`,
       food: `${(S.food[date] || []).length} items${past ? '' : ' today'}`,
     };
-    for (const t of P.dailyTasks) {
+    for (const t of tasks) {
       const done = tdone.has(t.id);
       const cov = covered.has(t.id);
       const openTask = () => {
@@ -405,8 +407,9 @@
         h('div', { class: 't' }, h('b', { text: t.label === 'Walk' ? `Walk ${walkT} min` : t.label }), h('small', { text: cov ? 'Covered by formal PT 🩺' : subs[t.id] || t.sub || '' })),
         h('span', { class: 'pill xp', text: '+' + t.xp }), tick));
     }
-    const nDone = P.dailyTasks.filter((t) => tdone.has(t.id)).length;
-    wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: 'Daily quests' }), h('span', { class: 'small muted', text: `${nDone} / ${P.dailyTasks.length}` })), fpt, ql));
+    const nDone = tasks.filter((t) => tdone.has(t.id)).length;
+    wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: 'Daily quests' }), h('span', { class: 'small muted', text: `${nDone} / ${tasks.length}` })), fpt, ql,
+      fastToday ? h('div', { class: 'small muted mt-s', text: `⏳ Fast day: Hit protein and Log food are off ${past ? 'for this day' : 'today'}. Water still counts.` }) : null));
 
     // ----- fuel snapshot -----
     const ws = F.ui.weekStart(date), thisWeek = ws === F.ui.weekStart(today);
@@ -415,7 +418,7 @@
     const used = treatQ && treatQ.extra ? treatQ.extra.used : 0, budget = F.game.treatBudget();
     const fuel = h('div', { class: 'card' });
     const fs = h('div', { class: 'fuelsnap' },
-      F.ui.ring(protein / pT, { size: 92, stroke: 9, label: num(protein), sub: `/ ${pT} g` }),
+      F.ui.ring(protein / pT, { size: 92, stroke: 9, label: num(protein), sub: fastToday ? 'fast day' : `/ ${pT} g`, color: fastToday ? 'var(--purple)' : undefined }),
       h('div', { class: 'stack', style: { gap: '6px' } },
         h('div', null, h('div', { class: 'row between small' }, h('span', { text: thisWeek ? '🍪 Treats this week' : '🍪 Treats that week' }), h('b', { text: `${num(used, 1)} / ${num(budget, 1)}` })), progress(budget ? used / budget : 1, used > budget ? 'red' : used > budget * 0.8 ? 'amber' : 'green')),
         h('div', null, h('div', { class: 'row between small' }, h('span', { text: '💧 Water' }), h('b', { text: `${F.u.volN(water)} / ${F.u.volN(waterT)} ${F.u.vu()}` })), progress(water / waterT, F.game.waterMet(water, waterT) ? 'green' : 'sky')),
@@ -440,7 +443,8 @@
       }
       const met = wk.list.filter((q) => q.target && q.met).length, tot = wk.list.filter((q) => q.target).length;
       wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: thisWeek ? 'Weekly quests' : 'Quests · week of ' + F.ui.fmtDate(ws, { month: 'short', day: 'numeric' }) }), h('span', { class: 'small muted', text: `${met} / ${tot} · perfect week +${P.perfectXP} XP` })), grid,
-        wk.travelDays ? h('div', { class: 'small muted mt-s', text: `${wk.travelDays} travel day${wk.travelDays > 1 ? 's' : ''} ${thisWeek ? 'this' : 'that'} week — targets scaled.` }) : null));
+        wk.travelDays ? h('div', { class: 'small muted mt-s', text: `${wk.travelDays} travel day${wk.travelDays > 1 ? 's' : ''} ${thisWeek ? 'this' : 'that'} week — targets scaled.` }) : null,
+        wk.fastDays ? h('div', { class: 'small muted mt-s', text: `${wk.fastDays} fast day${wk.fastDays > 1 ? 's' : ''} ${thisWeek ? 'this' : 'that'} week — the protein target is lower to match.` }) : null));
     }
     if (past) return wrap;
 
