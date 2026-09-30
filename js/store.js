@@ -23,7 +23,7 @@ F.store = (() => {
     settings: {
       theme: 'auto', location: 'home', travelLoc: 'room', phase: 1, sound: true, vibrate: true,
       walkMin: 30, schedule: null, quotas: {}, ptRoutine: null, slotPrefs: {}, runUnlocked: false,
-      nutrition: { protein: null, treatsWeek: 5, kcal: null, trackKcal: true },
+      nutrition: { protein: null, treatsWeek: 5, kcal: null, trackKcal: true, water: null },   // water: fl oz a day, null = auto
       fast: { day: 0, targetH: 24 },
       goals: { thresholdLb: null, photoWaist: 2, photoArms: 1 },
       quests: {},
@@ -33,6 +33,7 @@ F.store = (() => {
     days: {},                   // date -> {checkin:{knee,back,energy,ts}}
     sessions: [],               // logged sessions (see game.sessionXP for derived fields)
     food: {},                   // date -> [{id,name,p,sug,kcal,treat,ts}]
+    water: {},                  // date -> [{id,oz,ts}]
     foods: [],                  // saved custom foods
     fasts: [], activeFast: null,
     measurements: [],
@@ -108,6 +109,11 @@ F.store = (() => {
   function addCustomFood(f) { load().foods.push(Object.assign({ id: F.ui.uid(), ts: Date.now() }, f)); touch(); save(); }
   function updateCustomFood(id, patch) { const f = load().foods.find((x) => x.id === id); if (f) { Object.assign(f, patch, { u: Date.now() }); touch(); save(); } return f; }
   function removeCustomFood(id) { data.foods = data.foods.filter((x) => x.id !== id); tomb('foods', id); save(); }
+
+  // ---- water ----
+  function waterOn(date) { return load().water[date] || []; }
+  function addWater(date, oz) { load(); const rec = { id: F.ui.uid(), ts: Date.now(), oz }; (data.water[date] || (data.water[date] = [])).push(rec); touch(); save(); return rec; }
+  function removeWater(date, id) { if (!load().water[date]) return; data.water[date] = data.water[date].filter((x) => x.id !== id); if (!data.water[date].length) delete data.water[date]; tomb('water', id); save(); }
 
   // ---- fasts ----
   const byStart = (a, b) => (a.start || 0) - (b.start || 0);
@@ -196,10 +202,11 @@ F.store = (() => {
   // A cheap fingerprint of everything that syncs, to tell whether two copies differ.
   function digest(d) {
     const ids = (arr) => (arr || []).filter(Boolean).map((x) => x.id + ':' + stamp(x)).sort().join(',');
-    const food = d.food || {}, days = d.days || {}, seen = d.seen || {};
+    const food = d.food || {}, water = d.water || {}, days = d.days || {}, seen = d.seen || {};
     return JSON.stringify([
       ids(d.sessions), ids(d.measurements), ids(d.fasts), ids(d.foods),
       Object.keys(food).sort().map((k) => k + '=' + ids(food[k])).join(';'),
+      Object.keys(water).sort().map((k) => k + '=' + ids(water[k])).join(';'),
       Object.keys(days).sort().map((k) => k + '=' + ((days[k] && days[k].checkin && days[k].checkin.ts) || 0) + '/' + ((days[k] && days[k].locTs) || 0)).join(';'),
       Object.entries(d.deleted || {}).map(([k, v]) => k + ':' + Object.keys(v || {}).sort().join(',')).sort().join(';'),
       d.prefsU || 0, d.activeFastU || 0,
@@ -221,6 +228,10 @@ F.store = (() => {
     for (const date of new Set([...Object.keys(d.food), ...Object.keys(inc.food || {})])) {
       const list = mergeList(d.food[date], (inc.food || {})[date], 'food', d.deleted).sort((a, b) => (a.ts || 0) - (b.ts || 0));
       if (list.length) d.food[date] = list; else delete d.food[date];
+    }
+    for (const date of new Set([...Object.keys(d.water), ...Object.keys(inc.water || {})])) {
+      const list = mergeList(d.water[date], (inc.water || {})[date], 'water', d.deleted).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      if (list.length) d.water[date] = list; else delete d.water[date];
     }
     for (const [date, dd] of Object.entries(inc.days || {})) {
       if (!dd) continue;
@@ -260,24 +271,28 @@ F.store = (() => {
   function reset() { data = DEFAULTS(); lastPrefs = prefsKey(); saveNow(); }
 
   return { load, save, saveNow, rev: () => rev, onChange, addSession, updateSession, removeSession, sessionsOn,
-    day, checkin, setCheckin, foodOn, addFood, removeFood, addCustomFood, updateCustomFood, removeCustomFood,
+    day, checkin, setCheckin, foodOn, addFood, removeFood, addCustomFood, updateCustomFood, removeCustomFood, waterOn, addWater, removeWater,
     startFast, endFast, cancelFast, removeFast, setFastStart, addFast, addMeasurement, updateMeasurement, removeMeasurement,
     isTravel, tripOn, startTrip, endTrip, setTrip, removeTrip, location, setLocation, merge, snapshot, digest, exportJSON, importJSON, reset };
 })();
 
-/* Units: everything is stored in lb / in / mi; converted only for display and input. */
+/* Units: everything is stored in lb / in / mi / fl oz; converted only for display and input. */
 F.u = (() => {
   const metric = () => F.store.load().profile.units === 'metric';
   const r = (v, d) => (v === null || v === undefined || v === '' || isNaN(v) ? null : Math.round(v * 10 ** d) / 10 ** d);
   return {
     metric,
-    wu: () => (metric() ? 'kg' : 'lb'), lu: () => (metric() ? 'cm' : 'in'), du: () => (metric() ? 'km' : 'mi'),
+    wu: () => (metric() ? 'kg' : 'lb'), lu: () => (metric() ? 'cm' : 'in'), du: () => (metric() ? 'km' : 'mi'), vu: () => (metric() ? 'ml' : 'oz'),
     wv: (lb) => (lb === null || lb === undefined ? null : metric() ? r(lb * 0.45359237, 1) : r(lb, 1)),
     wIn: (v) => (v === null || v === undefined || v === '' ? null : metric() ? v / 0.45359237 : +v),
     lv: (inch) => (inch === null || inch === undefined ? null : metric() ? r(inch * 2.54, 1) : r(inch, 2)),
     lIn: (v) => (v === null || v === undefined || v === '' ? null : metric() ? v / 2.54 : +v),
     dv: (mi) => (mi === null || mi === undefined ? null : metric() ? r(mi * 1.609344, 2) : r(mi, 2)),
     dIn: (v) => (v === null || v === undefined || v === '' ? null : metric() ? v / 1.609344 : +v),
+    vv: (oz) => (oz === null || oz === undefined ? null : metric() ? Math.round(oz * 29.5735) : r(oz, 1)),
+    vIn: (v) => (v === null || v === undefined || v === '' ? null : metric() ? v / 29.5735 : +v),
+    volN(oz) { return oz === null || oz === undefined ? '–' : F.ui.num(this.vv(oz), metric() ? 0 : 1); },
+    vol(oz) { return oz === null || oz === undefined ? '–' : this.volN(oz) + ' ' + this.vu(); },
     w(lb, d = 0) { return lb === null || lb === undefined ? '–' : F.ui.num(this.wv(lb), d) + ' ' + this.wu(); },
     l(inch, d = 1) { return inch === null || inch === undefined ? '–' : F.ui.num(this.lv(inch), d) + ' ' + this.lu(); },
     d(mi, d = 1) { return mi === null || mi === undefined ? '–' : F.ui.num(this.dv(mi), d) + ' ' + this.du(); },

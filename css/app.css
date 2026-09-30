@@ -140,6 +140,7 @@ h3 { font-size: 0.98rem; font-weight: 600; margin-bottom: 6px; }
 .progress > i.green { background: var(--green); }
 .progress > i.amber { background: var(--amber); }
 .progress > i.red { background: var(--red); }
+.progress > i.sky { background: var(--sky); }
 .progress.thick { height: 11px; }
 .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 .grid2 { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
@@ -471,6 +472,12 @@ input.dayjump { width: auto; padding: 5px 9px; font-size: 0.83rem; border-radius
 .stages i.cur { background: var(--xp); animation: pulse 1.6s ease-in-out infinite; }
 .stage-now { display: flex; gap: 12px; align-items: flex-start; }
 .stage-now .si { font-size: 2rem; }
+.waterbtns { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.waterbtns button { display: flex; flex-direction: column; align-items: center; padding: 8px 2px 7px; border-radius: 12px; background: color-mix(in srgb, var(--sky) 9%, var(--bg3)); border: 1px solid var(--border); }
+.waterbtns button:hover { border-color: var(--sky); }
+.waterbtns button:active { transform: scale(0.96); }
+.waterbtns b { font-family: var(--display); font-size: 1.25rem; line-height: 1.1; }
+.waterbtns small { font-size: 0.7rem; color: var(--muted); }
 .budget { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
 
 /* ---------- Body ---------- */

@@ -21,7 +21,7 @@ FLAGS = {"ok", "caution", "avoid"}
 BLOCKS = {"list", "sets", "flow", "timer", "circuit"}
 TIMERS = {"intervals", "steady", "amrap", "stopwatch"}
 METRIC = re.compile(
-    r"^(sessions|ptDays|streakBest|comebacks|volume|holdMin|bikeMiles|walkMiles|fasts24|fasts36|proteinDays|sugarWeeks|"
+    r"^(sessions|ptDays|streakBest|comebacks|volume|holdMin|bikeMiles|walkMiles|fasts24|fasts36|proteinDays|waterDays|sugarWeeks|"
     r"measures|perfectWeeks|travelActiveDays|prs|cindyBest|murphRounds|murphRx|minStatLevel|big4Logged|weeks3|waistDrop|armGain|"
     r"count:\w+|countPhase:\w+:\d|countMin:\w+:\d+|longest:\w+|distBest:\w+|holdBest:\w+|holdBestAny:[\w,]+|repsBest:\w+|"
     r"e1rmBw:\w+|e1rmBwAny:[\w,]+|carryPct:\w+:\d+|carryPctAny:[\w,]+:\d+|carryBw:\w+:\d+)$")

@@ -328,6 +328,7 @@
     {"id": "mobility", "label": "Roll & stretch", "sub": "or any yoga", "icon": "🌀", "xp": 25, "kind": "session", "session": "mobility", "tags": ["mobility", "yoga"], "stat": "MOB", "min": 10},
     {"id": "walk", "label": "Walk", "icon": "🚶", "xp": 20, "kind": "walk", "stat": "END"},
     {"id": "protein", "label": "Hit protein", "icon": "🍗", "xp": 30, "kind": "protein", "stat": "FUEL"},
+    {"id": "water", "label": "Drink water", "icon": "💧", "xp": 15, "kind": "water", "stat": "FUEL"},
     {"id": "food", "label": "Log food", "icon": "📝", "xp": 10, "kind": "food", "stat": "FUEL"}
   ],
 
@@ -402,6 +403,8 @@
     {"id": "protein7", "name": "Well Fed", "icon": "🍗", "desc": "Hit your protein target on 7 days", "xp": 100, "metric": "proteinDays", "gte": 7},
     {"id": "protein60", "name": "Protein Engine", "icon": "🥩", "desc": "Hit your protein target on 60 days", "xp": 400, "metric": "proteinDays", "gte": 60},
     {"id": "sugar4", "name": "Sweet Balance", "icon": "🍪", "desc": "4 weeks inside your treat budget", "xp": 200, "metric": "sugarWeeks", "gte": 4},
+    {"id": "water7", "name": "Well Watered", "icon": "💧", "desc": "Hit your water target on 7 days", "xp": 100, "metric": "waterDays", "gte": 7},
+    {"id": "water60", "name": "Reservoir", "icon": "🚰", "desc": "Hit your water target on 60 days", "xp": 300, "metric": "waterDays", "gte": 60},
     {"id": "measure1", "name": "Baseline", "icon": "📏", "desc": "Log your first measurements", "xp": 75, "metric": "measures", "gte": 1},
     {"id": "measure6", "name": "Half a Year of Data", "icon": "📈", "desc": "6 monthly check-ins", "xp": 300, "metric": "measures", "gte": 6},
     {"id": "perfect1", "name": "Perfect Week", "icon": "🌟", "desc": "Hit every weekly quest", "xp": 200, "metric": "perfectWeeks", "gte": 1},

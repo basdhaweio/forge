@@ -112,7 +112,7 @@
       tt(num(T.realSessions), 'sessions'), tt(num(T.minutes / 60, 1), 'hours trained'), tt(F.ui.compact(T.kcal), `kcal burned ≈ ${F.ui.compact(T.kcal / F.game.COOKIE_KCAL)} cookies`),
       tt(F.ui.compact(F.u.wv(T.volume) || 0), F.u.wu() + ' lifted'), tt(num(T.holdSec / 60), 'minutes of holds'), tt(num(F.u.dv(T.bikeMi) || 0, 1), F.u.du() + ' on the bike'),
       tt(num(F.u.dv(T.walkMi) || 0, 1), F.u.du() + ' walked'), tt(num(T.tagDays.pt ? T.tagDays.pt.size : 0), 'PT days'), tt(num(T.fasts24), 'fasts of 24 h+'),
-      tt(num(C.proteinDays), 'protein days'), tt(num(C.perfectWeeks), 'perfect weeks'), tt(num(T.prs), 'personal records')));
+      tt(num(C.proteinDays), 'protein days'), F.u.metric() ? tt(num(T.waterOz * 0.0295735, 1), 'litres of water') : tt(num(T.waterOz / 128, 1), 'gallons of water'), tt(num(C.perfectWeeks), 'perfect weeks'), tt(num(T.prs), 'personal records')));
 
     // Heatmap
     const levels = {};

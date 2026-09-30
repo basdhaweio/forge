@@ -194,9 +194,10 @@
       h('div', { class: 'fieldrow' },
         numField('Protein (g/day)', n.protein, (v) => { n.protein = v; save(); }, { placeholder: F.game.proteinTarget() + ' auto', step: 5 }),
         numField('Treats per week', n.treatsWeek, (v) => { n.treatsWeek = v === null ? 5 : Math.max(0, v); save(); }, { step: 0.5 }),
+        numField(`Water (${F.u.vu()}/day)`, n.water ? F.u.vv(n.water) : null, (v) => { n.water = v > 0 ? F.u.vIn(v) : null; save(); }, { placeholder: F.u.vv(F.game.waterAuto()) + ' auto', step: 1 }),
         numField('Calorie target (optional)', n.kcal, (v) => { n.kcal = v; save(); }, { step: 50, placeholder: F.game.suggestKcal() ? F.game.suggestKcal() + ' suggested' : 'kcal' })),
       h('label', { class: 'toggle' }, tk, 'Show calories'),
-      h('p', { class: 'tiny muted', text: 'Suggested calories = estimated maintenance minus 300 — a gentle deficit that trims the waist while you build. Protein matters more than hitting a calorie number exactly.' }),
+      h('p', { class: 'tiny muted', text: 'Suggested calories = estimated maintenance minus 300 — a gentle deficit that trims the waist while you build. Protein matters more than hitting a calorie number exactly. Auto water is half your bodyweight in ounces.' }),
       h('div', { class: 'fieldrow mt' },
         h('label', { class: 'field' }, h('span', { text: 'Fast day' }), h('select', { onChange: (e) => { s.fast.day = +e.target.value; save(); } }, F.ui.DAYS.map((d, i) => h('option', { value: i, selected: s.fast.day === i, text: d })))),
         h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Fast length' }), seg([{ v: 24, label: '24 h' }, { v: 36, label: '36 h' }], s.fast.targetH, (v) => { s.fast.targetH = v; save(); })))));

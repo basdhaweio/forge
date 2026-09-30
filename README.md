@@ -8,7 +8,7 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
 
 ## What it does
 
-- **Today**: a morning check-in (knees, back, energy), today's mission from the weekly schedule, 7 daily quests (check-in, PT, isometric holds, roll & stretch, walk, protein, food log), a fuel snapshot and the weekly quests.
+- **Today**: a morning check-in (knees, back, energy), today's mission from the weekly schedule, 8 daily quests (check-in, PT, isometric holds, roll & stretch, walk, protein, water, food log), a fuel snapshot and the weekly quests.
 - **Catch up on a day you forgot**: the strip above Today shows the last seven days, with what each earned and which were missed. Tap one to open that day, then tick its PT, holds and stretching, check in, log food, and mark a session done or fill in its sets and weights. The + button can also log to yesterday or any earlier day.
 - **Formal PT days**: one tap on 🩺 "Formal PT today?" logs a clinic or PT Pilates session as PT and covers the home PT routine for the day. Settings → Program can let it cover holds and stretching too.
 - **Adapts**:
@@ -26,6 +26,7 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
   - A round counter for Murph/Cindy
 - **Fuel**:
   - A protein target (0.8 g/lb by default)
+  - **Water** by the glass or bottle against a daily target (half your bodyweight in ounces to start), with a one-tap button on Today
   - **Treats counted, not weighed**: small ½, regular 1, big 2, against a weekly budget (5 by default), so a baking day evens out
   - **Meals**: build a meal from ingredients once (it totals the protein and calories), then log it with one tap; a chocolate protein smoothie is included
   - Protein by portion ("palm of chicken, meat or fish" ≈ 30 g), so no weighing
@@ -39,7 +40,7 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
   - 7 stats (Strength, Engine, Agility, Mobility, Grit, Armor, Fuel)
   - A streak with freezes
   - 7 epic quests: Iron Return, Over the Threshold, Slopes Ready, Run Again, Murph, OCR Ready, Photo Day
-  - 47 achievements, personal records, lifetime totals and an activity heatmap
+  - 49 achievements, personal records, lifetime totals and an activity heatmap
 
 ## Layout
 

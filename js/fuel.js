@@ -146,6 +146,69 @@
     sheet(h('div', null, h('h2', { text: 'Add food' + (date === F.ui.today() ? '' : ' · ' + F.ui.fmtDate(date)) }), h('p', { class: 'small muted mb', text: 'One tap logs a portion — tap twice for two.' }), foodPicker(date, () => F.app.render())));
   };
 
+  // ---------- water ----------
+  // Logged by the glass or bottle against a daily target. Amounts are stored in fl oz and shown in oz or ml.
+  const waterSizes = () => (F.u.metric() ? [250, 330, 500, 750, 1000].map((ml) => ml / 29.5735) : [8, 12, 16, 24, 32]);
+  const waterTotal = (date) => F.store.waterOn(date).reduce((a, x) => a + (+x.oz || 0), 0);
+  // The size the one-tap button on Today adds: the amount logged most often lately (your usual glass or bottle),
+  // the newer one on a tie, and 16 oz / 500 ml until there is something to go on.
+  F.waterCup = () => {
+    const W = F.store.load().water;
+    const recent = Object.keys(W).sort().slice(-14).flatMap((d) => W[d]).slice(-24);
+    const count = {}, amount = {};
+    let best = null;
+    for (const x of recent) {
+      const k = Math.round(x.oz * 10);
+      count[k] = (count[k] || 0) + 1; amount[k] = x.oz;
+      if (best === null || count[k] >= count[best]) best = k;
+    }
+    return best === null ? (F.u.metric() ? 500 / 29.5735 : 16) : amount[best];
+  };
+  F.logWater = (date, oz, onAdd) => {
+    if (!(oz > 0)) return;
+    const target = F.game.waterTarget(), before = waterTotal(date);
+    const rec = F.store.addWater(date, oz);
+    F.timer.sfx('pop');
+    const hit = !F.game.waterMet(before, target) && F.game.waterMet(before + oz, target);
+    const task = F.data.prog().dailyTasks.find((t) => t.kind === 'water');
+    if (hit && task) F.ui.xpFloat(task.xp, '💧');
+    toast(`💧 +${F.u.vol(oz)}${hit ? ' — target hit' : ''}`, 2400, { label: 'Undo', run: () => { F.store.removeWater(date, rec.id); F.game.afterChange(); onAdd && onAdd(); } });
+    F.game.afterChange();
+    onAdd && onAdd();
+  };
+  function waterBox(date, redraw) {
+    const list = F.store.waterOn(date);
+    const total = waterTotal(date), target = F.game.waterTarget(), met = F.game.waterMet(total, target), left = Math.max(0, target - total), unit = F.u.vu();
+    const other = F.ui.numIn(null, { placeholder: unit, w: '84px', step: 1 });
+    const most = F.u.metric() ? 4000 / 29.5735 : 128;   // a gallon in one entry is a typo
+    const addOther = () => {
+      const v = +other.value, oz = F.u.vIn(v);
+      if (!(v > 0)) { toast('Enter an amount'); return; }
+      if (oz > most) { toast(`More than ${F.u.vol(most)} in one go? Check the amount.`, 2600); return; }
+      F.logWater(date, oz, redraw);
+    };
+    other.addEventListener('keydown', (e) => { if (e.key === 'Enter') addOther(); });
+    return h('div', null,
+      h('div', { class: 'row between' }, h('div', { class: 'eyebrow', style: { marginBottom: 0 }, text: '💧 Water' }), h('b', { class: 'num', style: { fontSize: '1.3rem' }, text: `${F.u.volN(total)} / ${F.u.volN(target)} ${unit}` })),
+      h('div', { class: 'mt-s' }, progress(total / target, met ? 'green' : 'sky', true)),
+      h('div', { class: 'small mt-s ' + (met ? 'green' : 'muted'), text: met ? 'Target hit. Anything more is a bonus.' : `${F.u.vol(left)} to go. Sparkling water, plain tea and black coffee count too.` }),
+      h('div', { class: 'waterbtns mt' }, waterSizes().map((oz) => h('button', { type: 'button', 'aria-label': 'Add ' + F.u.vol(oz), onClick: () => F.logWater(date, oz, redraw) },
+        h('b', { text: '+' + (F.u.metric() && F.u.vv(oz) >= 1000 ? F.u.vv(oz) / 1000 : F.u.vv(oz)) }), h('small', { text: F.u.metric() && F.u.vv(oz) >= 1000 ? 'L' : unit })))),
+      h('div', { class: 'row mt-s', style: { gap: '8px' } }, other, h('button', { class: 'btn sm', onClick: addOther }, icon('plus', 14), 'Other amount')),
+      list.length ? h('div', { class: 'mt' }, h('div', { class: 'tiny muted', text: 'Logged — tap one to remove it' }),
+        h('div', { class: 'chips mt-s' }, list.map((x) => h('button', { type: 'button', class: 'chip small', 'aria-label': 'Remove ' + F.u.vol(x.oz), onClick: () => { F.store.removeWater(date, x.id); F.game.afterChange(); redraw(); } }, F.u.vol(x.oz) + ' ✕')))) : null);
+  }
+  F.waterSheet = (date = F.ui.today()) => {
+    const body = h('div');
+    const draw = () => {
+      body.innerHTML = '';
+      body.append(waterBox(date, () => { draw(); F.app.render(); }),
+        date === F.ui.today() ? null : h('div', { class: 'small muted mt', text: `Saves to ${F.ui.fmtDate(date, { weekday: 'long', month: 'short', day: 'numeric' })}.` }));
+    };
+    sheet(body);
+    draw();
+  };
+
   // ---------- fasting ----------
   function stageAt(hrs) {
     const st = F.data.prog().fastingStages;
@@ -378,12 +441,12 @@
     const d = C.days[date] || { protein: 0, treats: 0, kcalIn: 0, kcal: 0 };
     const pT = F.game.proteinTarget(), kT = S.settings.nutrition.kcal;
     const isToday = date === F.ui.today();
-    wrap.append(h('div', { class: 'pagehead row between' }, h('div', null, h('h1', { text: 'Fuel' }), h('div', { class: 'sub', text: 'Protein first, treats on a weekly budget, one fast a week' })),
+    wrap.append(h('div', { class: 'pagehead row between' }, h('div', null, h('h1', { text: 'Fuel' }), h('div', { class: 'sub', text: 'Protein and water daily, treats on a weekly budget, one fast a week' })),
       h('div', { class: 'row nowrap' },
         h('a', { class: 'iconbtn', href: '#/fuel/' + F.ui.addDays(date, -1), 'aria-label': 'Previous day' }, icon('back')),
         h('span', { class: 'small', style: { minWidth: '92px', textAlign: 'center' }, text: isToday ? 'Today' : F.ui.fmtDate(date) }),
         isToday ? h('span', { style: { width: '36px' } }) : h('a', { class: 'iconbtn', href: '#/fuel/' + F.ui.addDays(date, 1), 'aria-label': 'Next day' }, icon('chevron')))));
-    if (!isToday) wrap.append(h('div', { class: 'callout sky small row between mb' }, h('span', { text: `📅 Food here is saved to ${F.ui.fmtDate(date, { weekday: 'long', month: 'short', day: 'numeric' })}.` }),
+    if (!isToday) wrap.append(h('div', { class: 'callout sky small row between mb' }, h('span', { text: `📅 Food and water here are saved to ${F.ui.fmtDate(date, { weekday: 'long', month: 'short', day: 'numeric' })}.` }),
       h('div', { class: 'row', style: { gap: '6px' } }, h('a', { class: 'btn xs', href: '#/day/' + date, text: 'Open that day' }), h('a', { class: 'btn xs primary', href: '#/fuel', text: 'Back to today' }))));
 
     // Totals
@@ -394,6 +457,8 @@
         h('div', null, h('b', { text: need ? `${num(need)} g protein to go` : 'Protein target hit 💪' }), h('div', { class: 'small muted', text: need ? `≈ ${num(need / 24, 1)} scoops of whey, or ${num(need / 30, 1)} palm-sized portions of meat or fish` : 'Muscle has what it needs to grow.' })),
         h('div', { class: 'small' }, '🍪 Treats: ', h('b', { text: F.fmtTreats(d.treats || 0) }), h('span', { class: 'muted', text: isToday ? ' today' : '' })),
         S.settings.nutrition.trackKcal ? h('div', { class: 'small' }, '🔥 Calories: ', h('b', { text: '≈ ' + num(d.kcalIn) }), h('span', { class: 'muted', text: kT ? ` / ${num(kT)} target` : ' eaten' }), h('span', { class: 'muted', text: ` · ≈ ${num(d.kcal)} burned training` })) : null))));
+
+    wrap.append(h('div', { class: 'card' }, waterBox(date, rerender)));
 
     // Weekly treat budget
     const ws = F.ui.weekStart(date);

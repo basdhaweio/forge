@@ -20,6 +20,14 @@ F.game = (() => {
   function proteinTarget() { const S = F.store.load(); return S.settings.nutrition.protein || Math.round((weightLb() * 0.8) / 5) * 5; }
   // Treats are counted, not weighed: small ½, regular 1, big 2. Older logs carried sugar grams; map those to a size.
   function treatBudget() { const n = F.store.load().settings.nutrition; return n.treatsWeek ?? 5; }
+  // Water: half your bodyweight in ounces is the usual starting point, kept between 64 and 120 oz. Stored in fl oz.
+  function waterAuto() {
+    const oz = Math.min(120, Math.max(64, Math.round((weightLb() * 0.5) / 8) * 8));
+    return F.u.metric() ? (Math.round((oz * 29.5735) / 100) * 100) / 29.5735 : oz;   // a round number of ml in metric
+  }
+  function waterTarget() { const w = F.store.load().settings.nutrition.water; return w > 0 ? w : waterAuto(); }
+  // Judged on the amounts as they're shown (0.1 oz or 1 ml), so a card that reads "96 / 96 oz" is always a tick.
+  function waterMet(total, target = waterTarget()) { return F.u.vv(total || 0) >= F.u.vv(target); }
   function tpOf(it) {
     if (!it) return 0;
     if (it.tp !== undefined && it.tp !== null) return +it.tp || 0;
@@ -109,7 +117,7 @@ F.game = (() => {
   }
 
   // ---------- daily tasks ----------
-  function tasksDoneFor(date, d, S, proteinT, walkT) {
+  function tasksDoneFor(date, d, S, proteinT, walkT, waterT) {
     const out = new Set();
     const cover = S.settings.formalPtCovers || {};
     for (const t of F.data.prog().dailyTasks) {
@@ -119,6 +127,7 @@ F.game = (() => {
       else if (t.kind === 'walk') { if (d.walkMin >= walkT) out.add(t.id); }
       else if (t.kind === 'protein') { if (d.protein >= proteinT) out.add(t.id); }
       else if (t.kind === 'food') { if (d.foodN > 0) out.add(t.id); }
+      else if (t.kind === 'water') { if (waterMet(d.water, waterT)) out.add(t.id); }
     }
     return out;
   }
@@ -170,7 +179,7 @@ F.game = (() => {
     const src = { sessions: 0, tasks: 0, weeks: 0, fasts: 0, measures: 0, ach: 0, quests: 0 };
     let total = 0;
     const days = {};
-    const D = (d) => days[d] || (days[d] = { xp: 0, active: false, min: 0, kcal: 0, tags: new Set(), holdSec: 0, walkMin: 0, protein: 0, treats: 0, kcalIn: 0, foodN: 0, sessions: 0 });
+    const D = (d) => days[d] || (days[d] = { xp: 0, active: false, min: 0, kcal: 0, tags: new Set(), holdSec: 0, walkMin: 0, protein: 0, treats: 0, kcalIn: 0, foodN: 0, water: 0, sessions: 0 });
     const give = (d, xp, stat, kind) => {
       if (!xp) return;
       total += xp; src[kind] += xp;
@@ -179,7 +188,7 @@ F.game = (() => {
     };
     const T = { sessions: 0, realSessions: 0, minutes: 0, kcal: 0, volume: 0, holdSec: 0, bikeMi: 0, walkMi: 0, runMi: 0, prs: 0,
       tagCount: {}, tagDays: {}, longest: {}, countMin: {}, distBest: {}, holdBest: {}, repsBest: {}, e1rm: {}, maxW: {}, carries: {}, carryMax: {},
-      cindyBest: 0, murphRounds: 0, murphRx: 0, big4: new Set(), countPhase: {}, fasts24: 0, fasts36: 0, fastHours: 0 };
+      cindyBest: 0, murphRounds: 0, murphRx: 0, big4: new Set(), countPhase: {}, fasts24: 0, fasts36: 0, fastHours: 0, waterOz: 0 };
 
     for (const s of S.sessions) {
       const d = D(s.date), tags = s.tags || [];
@@ -238,6 +247,10 @@ F.game = (() => {
       const d = D(date);
       for (const it of items) { d.protein += +it.p || 0; d.treats += tpOf(it); d.kcalIn += +it.kcal || 0; d.foodN++; }
     }
+    for (const [date, items] of Object.entries(S.water || {})) {
+      const d = D(date);
+      for (const it of items) { d.water += +it.oz || 0; T.waterOz += +it.oz || 0; }
+    }
     for (const f of S.fasts) {
       const hrs = (f.end - f.start) / 3.6e6, date = F.ui.ymd(new Date(f.end));
       T.fastHours += hrs;
@@ -247,14 +260,15 @@ F.game = (() => {
     }
     for (const m of S.measurements) give(m.date, 50, null, 'measures');
 
-    const proteinT = proteinTarget(), walkT = S.settings.walkMin || 30;
-    let proteinDays = 0;
+    const proteinT = proteinTarget(), walkT = S.settings.walkMin || 30, waterT = waterTarget();
+    let proteinDays = 0, waterDays = 0;
     for (const date of new Set([...Object.keys(days), ...Object.keys(S.days)])) {
       if (date > today) continue;
-      const done = tasksDoneFor(date, days[date], S, proteinT, walkT);
+      const done = tasksDoneFor(date, days[date], S, proteinT, walkT, waterT);
       D(date).tasks = done;
       for (const t of P.dailyTasks) if (done.has(t.id)) give(date, t.xp, t.stat, 'tasks');
       if (done.has('protein')) proteinDays++;
+      if (done.has('water')) waterDays++;
     }
 
     // Streak: any logged session (PT counts) makes a day active. Every 7 active days banks a freeze (max 2);
@@ -296,7 +310,7 @@ F.game = (() => {
 
     const stats = {};
     for (const st of P.stats) stats[st.id] = Object.assign({ id: st.id, name: st.name, icon: st.icon, color: st.color, desc: st.desc }, statInfo(statXP[st.id] || 0));
-    const C = { src, statXP, stats, days, T, streak, weeks, thisWeek: weeks[thisWS], firstDay: firstDates[0] || today, proteinDays, sugarWeeks, perfectWeeks, weeks3, travelActiveDays,
+    const C = { src, statXP, stats, days, T, streak, weeks, thisWeek: weeks[thisWS], firstDay: firstDates[0] || today, proteinDays, waterDays, sugarWeeks, perfectWeeks, weeks3, travelActiveDays,
       minStatLevel: Math.min(...Object.values(stats).map((x) => x.level)) };
     C.metric = (name) => metric(name, C, S);
 
@@ -343,6 +357,7 @@ F.game = (() => {
       case 'fasts24': return T.fasts24;
       case 'fasts36': return T.fasts36;
       case 'proteinDays': return C.proteinDays;
+      case 'waterDays': return C.waterDays;
       case 'sugarWeeks': return C.sugarWeeks;
       case 'measures': return S.measurements.length;
       case 'perfectWeeks': return C.perfectWeeks;
@@ -439,5 +454,5 @@ F.game = (() => {
   }
 
   return { compute, afterChange, sessionXP, detectPRs, prText, weekQuotas, metricText, levelInfo, statInfo, titleFor,
-    weightLb, kcal, age, hrMax, proteinTarget, treatBudget, tpOf, bmr, suggestKcal, e1rm, fastXP, COOKIE_KCAL, QSTAT };
+    weightLb, kcal, age, hrMax, proteinTarget, treatBudget, waterTarget, waterAuto, waterMet, tpOf, bmr, suggestKcal, e1rm, fastXP, COOKIE_KCAL, QSTAT };
 })();

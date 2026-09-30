@@ -92,6 +92,7 @@ This is how Forge builds each day and week, written so a physical therapist can 
 ## Fuel
 
 - **Protein:** 0.8 g per lb of bodyweight by default.
+- **Water:** logged by the glass or bottle. The daily target starts at half your bodyweight in ounces (kept between 64 and 120 oz) and can be changed in Settings. Sparkling water, plain tea and black coffee count. It is a daily quest, so it still counts on a fast day.
 - **Treats:** counted, not weighed. A treat is a cookie, brownie, muffin or soda; small ones count ½ and a slice of cake or a big bakery cookie counts 2. The budget is **weekly** (5 by default) so a baking day balances out. Fruit, milk and plain yogurt don't count.
 - **Meals:** built once from a list of ingredients, which totals the protein and calories, then logged with one tap. Protein can also be logged by portion (a palm of meat or fish ≈ 30 g).
 - **Calories:** optional. The suggested target is estimated maintenance (Mifflin-St Jeor × 1.45) minus 300.

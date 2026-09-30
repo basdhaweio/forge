@@ -150,6 +150,7 @@
           item('🥋', 'Activity', 'Krav class, walk, ride, run, PT visit, anything', () => F.quickLog(null, { date })),
           item('🚶', 'Walk', 'Minutes, distance or steps', () => F.quickLog('walk', { date })),
           item('🍗', 'Food', 'Meals, protein, treats', () => F.foodSheet(date)),
+          item('💧', 'Water', 'A glass, a bottle, any amount', () => F.waterSheet(date)),
           S.activeFast
             ? item('⏳', 'Fast in progress', 'Stages, end it, or fix when it started', () => { location.hash = '#/fuel'; })
             : item('⏳', 'Start a fast', 'From now, or from when you last ate', () => F.fastSheet()),
@@ -355,6 +356,7 @@
     const tdone = dayRec.tasks || new Set();
     const ql = h('div', { class: 'card tight quests' });
     const protein = dayRec.protein || 0, pT = F.game.proteinTarget(), walked = dayRec.walkMin || 0, walkT = S.settings.walkMin || 30;
+    const water = dayRec.water || 0, waterT = F.game.waterTarget(), cup = F.waterCup();
     const formal = formalOn(date);
     const cover = S.settings.formalPtCovers || {};
     const covered = new Set(formal ? ['pt'].concat(['holds', 'mobility'].filter((k) => cover[k])) : []);
@@ -378,6 +380,7 @@
       mobility: F.data.templateFor('mobility', date).name.replace('Roll & stretch: ', ''),
       walk: `${walked} / ${walkT} min`,
       protein: `${num(protein)} / ${pT} g`,
+      water: `${F.u.volN(water)} / ${F.u.volN(waterT)} ${F.u.vu()}`,
       food: `${(S.food[date] || []).length} items${past ? '' : ' today'}`,
     };
     for (const t of P.dailyTasks) {
@@ -388,6 +391,7 @@
         else if (t.kind === 'session') start(t.session);
         else if (t.kind === 'walk') F.quickLog('walk', { date: D() });
         else if (t.kind === 'protein' || t.kind === 'food') location.hash = fuelHref;
+        else if (t.kind === 'water') F.waterSheet(D());
         else if (t.kind === 'checkin') { drawCheckin(true); ciCard.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       };
       const tick = h('button', { class: 'tick' + (done ? ' on' : ''), 'aria-label': done ? 'Undo' : 'Mark done', onClick: (ev) => {
@@ -414,8 +418,11 @@
       F.ui.ring(protein / pT, { size: 92, stroke: 9, label: num(protein), sub: `/ ${pT} g` }),
       h('div', { class: 'stack', style: { gap: '6px' } },
         h('div', null, h('div', { class: 'row between small' }, h('span', { text: thisWeek ? '🍪 Treats this week' : '🍪 Treats that week' }), h('b', { text: `${num(used, 1)} / ${num(budget, 1)}` })), progress(budget ? used / budget : 1, used > budget ? 'red' : used > budget * 0.8 ? 'amber' : 'green')),
+        h('div', null, h('div', { class: 'row between small' }, h('span', { text: '💧 Water' }), h('b', { text: `${F.u.volN(water)} / ${F.u.volN(waterT)} ${F.u.vu()}` })), progress(water / waterT, F.game.waterMet(water, waterT) ? 'green' : 'sky')),
         h('div', { class: 'small muted', text: `${past ? 'This day' : 'Today'}: ${F.fmtTreats(dayRec.treats || 0)}${S.settings.nutrition.trackKcal ? ` · ≈ ${num(dayRec.kcalIn || 0)} kcal eaten` : ''} · ≈ ${num(dayRec.kcal || 0)} kcal burned` }),
-        h('div', { class: 'btngroup' }, h('button', { class: 'btn sm', onClick: () => F.foodSheet(D()) }, icon('plus', 14), 'Food'), h('a', { class: 'btn sm ghost', href: fuelHref }, 'Fuel', icon('chevron', 14)))));
+        h('div', { class: 'btngroup' }, h('button', { class: 'btn sm', onClick: () => F.foodSheet(D()) }, icon('plus', 14), 'Food'),
+          h('button', { class: 'btn sm', onClick: () => F.logWater(D(), cup, () => F.app.render()) }, '💧 +' + F.u.vol(cup)),
+          h('a', { class: 'btn sm ghost', href: fuelHref }, 'Fuel', icon('chevron', 14)))));
     fuel.append(h('div', { class: 'eyebrow', text: 'Fuel' }), fs);
     const fastMini = past ? null : F.fastMini(date);
     if (fastMini) fuel.append(h('div', { class: 'divider' }), fastMini);
