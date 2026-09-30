@@ -4,7 +4,10 @@
   const { h, icon, toast, sheet, num, pill, progress } = F.ui;
   const LONG = { weekday: 'long', month: 'long', day: 'numeric' };
   const SHORT = { weekday: 'short', month: 'short', day: 'numeric' };
+  const MD = { month: 'short', day: 'numeric' };
+  const PLANE = String.fromCharCode(0x2708, 0xFE0E);   // the plane as a text glyph, so it takes the label's colour
   const forDay = (date) => (date === F.ui.today() ? '' : ' · ' + F.ui.fmtDate(date, SHORT));
+  const tripText = (t) => (!t.end ? 'since ' + F.ui.fmtDate(t.start, MD) : t.start === t.end ? F.ui.fmtDate(t.start, MD) : F.ui.fmtDate(t.start, MD) + ' – ' + F.ui.fmtDate(t.end, MD));
 
   // Logging something another way supersedes the same session sitting open with nothing ticked — but only one for
   // that day, or a live one abandoned on an earlier day. Never today's session from a past day's page, or the reverse.
@@ -85,6 +88,46 @@
         h('button', { class: 'btn danger', text: 'Not a PT day', onClick: () => { F.store.removeSession(rec.id); sh.close(); F.app.render(); } }))));
   };
 
+  // When travel mode was on: add a trip after the fact, or change or remove one. Days away use the travel kit and
+  // scale that week's quests, exactly as if travel mode had been on at the time.
+  F.tripSheet = ({ trip = null, date } = {}) => {
+    const today = F.ui.today();
+    date = date || today;
+    const startIn = h('input', { type: 'date', value: trip ? trip.start : date, max: today });
+    const endIn = h('input', { type: 'date', value: trip ? trip.end || today : date, max: today });
+    const still = h('input', { type: 'checkbox', checked: trip ? !trip.end : date === today });
+    const endField = h('label', { class: 'field' }, h('span', { text: 'Last day away' }), endIn);
+    const note = h('div', { class: 'callout small' });
+    const read = () => ({ a: F.ui.isDate(startIn.value) ? startIn.value : null, b: still.checked ? null : F.ui.isDate(endIn.value) ? endIn.value : '' });
+    const problem = ({ a, b }) => (!a || b === '' ? 'Set the dates.'
+      : a > today || (b && b > today) ? 'A trip can’t be in the future here — tap Travelling on the day you leave.'
+      : b && b < a ? 'The last day away has to be on or after the first.' : '');
+    const paint = () => {
+      endField.hidden = still.checked;
+      const r = read(), bad = problem(r);
+      const n = bad ? 0 : F.ui.daysBetween(r.a, r.b || today) + 1;
+      note.className = 'callout small' + (bad ? ' amber' : ' sky');
+      note.textContent = bad || `${n} day${n === 1 ? '' : 's'} in travel mode${r.b ? '' : ' so far, and it stays on until you tap Back home'}. Plans for those days use your travel kit, and the weekly quests scale to the days away.`;
+    };
+    for (const el of [startIn, endIn, still]) { el.addEventListener('input', paint); el.addEventListener('change', paint); }
+    const done = (msg) => { sh.close(); toast(msg, 2600); F.game.afterChange(); F.app.render(); };
+    const sh = sheet(h('div', { class: 'stack' },
+      h('h2', { text: trip ? '✈️ Trip dates' : '✈️ When were you away?' }),
+      h('p', { class: 'small muted', text: trip ? 'Change when this trip started or ended, or remove it if you weren’t travelling.' : 'Travel mode wasn’t on at the time? Set the days you were away.' }),
+      h('div', { class: 'fieldrow' }, h('label', { class: 'field' }, h('span', { text: 'First day away' }), startIn), endField),
+      h('label', { class: 'toggle' }, still, 'Still away'),
+      note,
+      h('div', { class: 'btngroup' },
+        h('button', { class: 'btn primary', text: 'Save', onClick: () => {
+          const r = read(), bad = problem(r);
+          if (bad) { toast(bad, 2600); return; }
+          F.store.setTrip(trip, r.a, r.b);
+          done('Travel mode set: ' + tripText({ start: r.a, end: r.b }));
+        } }),
+        trip ? h('button', { class: 'btn danger', text: 'Wasn’t away — remove', onClick: () => { F.store.removeTrip(trip); done('Trip removed'); } }) : null)));
+    paint();
+  };
+
   // The + button. It logs for the day on screen, and can be pointed at yesterday or any earlier day.
   F.quickMenu = () => {
     const S = F.store.load(), today = F.ui.today(), yest = F.ui.addDays(today, -1);
@@ -129,9 +172,10 @@
       const xp = rec ? Math.round(rec.xp) : 0;
       const mark = state === 'frozen' ? '❄️' : xp ? '+' + F.ui.compact(xp) : state === 'pre' ? '' : '○';
       const says = { done: `${num(xp)} XP`, frozen: 'covered by a streak freeze', open: 'no activity logged yet', pre: 'before you started', miss: 'no activity logged' }[state];
-      strip.append(h('a', { class: `ds-day ${state}${d === date ? ' sel' : ''}${d === today ? ' today' : ''}`, href: d === today ? '#/' : '#/day/' + d,
-        'aria-label': `${F.ui.fmtDate(d, LONG)}: ${says}`, 'aria-current': d === date ? 'date' : null },
-        h('small', { text: d === today ? 'Today' : F.ui.DAYS[F.ui.dow(d)].slice(0, 3) }), h('b', { text: String(F.ui.parse(d).getDate()) }), h('i', { text: mark })));
+      const away = F.store.isTravel(d);   // a small plane marks the days travel mode covers
+      strip.append(h('a', { class: `ds-day ${state}${d === date ? ' sel' : ''}${d === today ? ' today' : ''}${away ? ' trip' : ''}`, href: d === today ? '#/' : '#/day/' + d,
+        'aria-label': `${F.ui.fmtDate(d, LONG)}: ${says}${away ? ', travel day' : ''}`, 'aria-current': d === date ? 'date' : null },
+        h('small', { text: d === today ? 'Today' : (away ? PLANE : '') + F.ui.DAYS[F.ui.dow(d)].slice(0, 3) }), h('b', { text: String(F.ui.parse(d).getDate()) }), h('i', { text: mark })));
     }
     return { strip, empty };
   }
@@ -173,6 +217,7 @@
 
     // ----- hero -----
     const travel = F.store.isTravel(date);
+    const trip = travel ? F.store.tripOn(date) : null;
     const locbar = h('div', { class: 'locbar' });
     const setLoc = (fn) => { fn(); F.store.save(); F.app.render(); };
     const todayLoc = F.store.location(date);
@@ -181,15 +226,21 @@
         const L = F.data.loc(l);
         locbar.append(h('button', { class: todayLoc === l ? 'on' : '', onClick: () => { F.store.setLocation(D(), l); F.app.render(); } }, L.icon + ' ' + (l === 'gym' ? 'Gym day' : L.label)));
       }
-      if (!past) locbar.append(h('button', { class: 'trip', onClick: () => setLoc(() => { F.store.startTrip(D()); toast('Travel mode on — plans use your travel kit and weekly quests scale down.', 3500); }) }, '✈️ Travelling'));
-    } else if (past) {
-      locbar.append(h('span', { class: 'pill sky', text: '✈️ Travel day · ' + F.data.loc(todayLoc).label }));
+      locbar.append(past
+        ? h('button', { class: 'trip', onClick: () => F.tripSheet({ date }) }, '✈️ Was away')
+        : h('button', { class: 'trip', onClick: () => setLoc(() => {
+          F.store.startTrip(D());
+          toast('Travel mode on — plans use your travel kit and weekly quests scale down.', 4500, { label: 'Left earlier?', run: () => F.tripSheet({ trip: F.store.tripOn(F.ui.today()) }) });
+        }) }, '✈️ Travelling'));
     } else {
+      // The kit is kept per day, so a past day can differ; on Today it also becomes the default for the rest of the trip.
       for (const l of ['room', 'hotelgym']) {
         const L = F.data.loc(l);
-        locbar.append(h('button', { class: 'trip ' + (S.settings.travelLoc === l ? 'on' : ''), onClick: () => setLoc(() => { S.settings.travelLoc = l; }) }, L.icon + ' ' + L.label));
+        locbar.append(h('button', { class: 'trip ' + (todayLoc === l ? 'on' : ''), onClick: () => setLoc(() => { if (!past) S.settings.travelLoc = l; F.store.setLocation(D(), l); }) }, L.icon + ' ' + L.label));
       }
-      locbar.append(h('button', { onClick: () => setLoc(() => { F.store.endTrip(D()); toast('Welcome home.'); }) }, '🏠 Back home'));
+      locbar.append(past
+        ? h('button', { onClick: () => F.tripSheet({ trip, date }) }, '✈️ Away ' + tripText(trip), icon('edit', 13))
+        : h('button', { onClick: () => setLoc(() => { F.store.endTrip(D()); toast('Welcome home.'); }) }, '🏠 Back home'));
     }
     const gymHint = `Gym day: ${past ? 'this day’s' : 'today’s'} strength session ${past ? 'is' : 'becomes'} a gym session (cables, pulldown, machines).${past ? '' : ' Tomorrow goes back to home.'}`;
     if (past) {
@@ -212,7 +263,8 @@
           h('a', { class: 'btn sm primary', href: '#/' }, 'Back to today'),
           dateIn),
         locbar,
-        !travel && todayLoc === 'gym' ? h('div', { class: 'small muted mt-s', text: gymHint }) : null,
+        travel ? h('div', { class: 'small muted mt-s', text: 'Travel day: plans use the travel kit picked here, and that week’s quests scale to the days away.' })
+          : todayLoc === 'gym' ? h('div', { class: 'small muted mt-s', text: gymHint }) : null,
         status));
     } else {
       const hr = new Date().getHours();
@@ -224,7 +276,8 @@
           C.streak.freezes ? h('span', { title: 'Streak freezes banked — a missed day spends one instead of breaking the streak', text: '· ' + '❄️'.repeat(C.streak.freezes) }) : null),
         h('div', { class: 'mt-s' }, h('div', { class: 'xpbar', style: { height: '8px' } }, h('i', { style: { width: C.level.pct * 100 + '%' } }))),
         locbar,
-        travel ? h('div', { class: 'small muted mt-s', text: 'Travel mode: sessions use your travel kit, the 4×4 goes machine-free if needed, and weekly quests scale to the days away.' })
+        travel ? h('div', { class: 'small muted mt-s' }, `Travel mode ${tripText(trip)}: sessions use your travel kit, the 4×4 goes machine-free if needed, and weekly quests scale to the days away. `,
+          h('button', { class: 'btn xs ghost', text: 'Change dates', onClick: () => F.tripSheet({ trip: F.store.tripOn(F.ui.today()) }) }))
           : todayLoc === 'gym' ? h('div', { class: 'small muted mt-s', text: gymHint }) : null));
     }
 

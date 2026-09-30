@@ -137,17 +137,43 @@ F.store = (() => {
   function removeMeasurement(id) { data.measurements = data.measurements.filter((x) => x.id !== id); tomb('measurements', id); save(); }
 
   // ---- travel ----
-  function isTravel(date) { return load().trips.some((t) => t.start <= date && (!t.end || t.end >= date)); }
-  function startTrip(date) { if (!isTravel(date)) { data.trips.push({ start: date, end: null }); save(); } }
-  // Home again: the trip's last day was yesterday. A trip started and ended the same day is dropped.
+  // trips: [{start, end|null}], kept sorted and never overlapping or back to back. end null = still away.
+  const covers = (t, date) => t.start <= date && (!t.end || t.end >= date);
+  const sameTrip = (a, b) => a === b || (a.start === b.start && (a.end || null) === (b.end || null));
+  function isTravel(date) { return load().trips.some((t) => covers(t, date)); }
+  function tripOn(date) { return load().trips.find((t) => covers(t, date)) || null; }
+  function tidyTrips() {
+    const out = [];
+    for (const t of data.trips.filter((x) => x && x.start && (!x.end || x.end >= x.start)).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0))) {
+      const last = out[out.length - 1];
+      if (last && (!last.end || F.ui.addDays(last.end, 1) >= t.start)) { if (last.end && (!t.end || t.end > last.end)) last.end = t.end || null; }
+      else out.push({ start: t.start, end: t.end || null });
+    }
+    data.trips = out;
+  }
+  function startTrip(date) { if (!isTravel(date)) { data.trips.push({ start: date, end: null }); tidyTrips(); save(); } }
+  // Home again from this day on: the trip covering it ends the day before, or goes if it began that day.
   function endTrip(date) {
     load();
-    data.trips = data.trips.filter((t) => !(t.start === date && !t.end));
-    for (const t of data.trips) if (!t.end && t.start < date) t.end = F.ui.addDays(date, -1);
+    data.trips = data.trips.filter((t) => !(t.start === date && covers(t, date)));
+    for (const t of data.trips) if (t.start < date && covers(t, date)) t.end = F.ui.addDays(date, -1);
     save();
   }
-  // Home or gym is picked per day (it resets to home tomorrow); trips set the travel kit for every day they cover.
-  function location(date = F.ui.today()) { const S = load(); return isTravel(date) ? S.settings.travelLoc : (S.days[date] && S.days[date].loc) || 'home'; }
+  // Add a trip after the fact, or change the dates of one (pass the trip being edited). Trips that meet are merged.
+  function setTrip(old, start, end) {
+    load();
+    if (old) data.trips = data.trips.filter((t) => !sameTrip(t, old));
+    data.trips.push({ start, end: end || null });
+    tidyTrips(); save();
+  }
+  function removeTrip(old) { load(); data.trips = data.trips.filter((t) => !sameTrip(t, old)); save(); }
+  // Where a day's plan is built for. Home or gym is picked per day and resets to home. A travel day uses the hotel
+  // room or hotel gym picked for that day, else whichever was chosen last while travelling.
+  function location(date = F.ui.today()) {
+    const S = load(), own = S.days[date] && S.days[date].loc;
+    if (isTravel(date)) return own === 'room' || own === 'hotelgym' ? own : S.settings.travelLoc;
+    return own === 'gym' ? 'gym' : 'home';
+  }
   function setLocation(date, loc) { const d = day(date); d.loc = loc; d.locTs = Date.now(); touch(); save(); }
 
   // ---- merging: backups and sync use the same rules ----
@@ -236,7 +262,7 @@ F.store = (() => {
   return { load, save, saveNow, rev: () => rev, onChange, addSession, updateSession, removeSession, sessionsOn,
     day, checkin, setCheckin, foodOn, addFood, removeFood, addCustomFood, updateCustomFood, removeCustomFood,
     startFast, endFast, cancelFast, removeFast, setFastStart, addFast, addMeasurement, updateMeasurement, removeMeasurement,
-    isTravel, startTrip, endTrip, location, setLocation, merge, snapshot, digest, exportJSON, importJSON, reset };
+    isTravel, tripOn, startTrip, endTrip, setTrip, removeTrip, location, setLocation, merge, snapshot, digest, exportJSON, importJSON, reset };
 })();
 
 /* Units: everything is stored in lb / in / mi; converted only for display and input. */

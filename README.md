@@ -13,7 +13,7 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
 - **Formal PT days**: one tap on 🩺 "Formal PT today?" logs a clinic or PT Pilates session as PT and covers the home PT routine for the day. Settings → Program can let it cover holds and stretching too.
 - **Adapts**:
   - **Home by default, gym when you go**: every day is planned for the home kit (rack, TRX, heavy bag, bands, PT gear). Tap **Gym day** on Today when you get to the gym and that day's strength session becomes Gym day A or B (pulldown, cables, machines). The next day goes back to home.
-  - **Travel mode** swaps in the hotel-room or hotel-gym kit, makes the 4×4 machine-free and scales the weekly quests to the days away.
+  - **Travel mode** swaps in the hotel-room or hotel-gym kit, makes the 4×4 machine-free and scales the weekly quests to the days away. A trip can be added, moved or removed afterwards from any past day (“Was away”), and each day away keeps its own kit.
   - A **flare-up** check-in swaps the day to a recovery session. Recovery days keep the streak and earn bonus XP.
   - **Low energy** trims optional sets.
 - **Train**: 29 guided sessions (strength A/B/C, gym days A/B, TRX, Krav, Norwegian 4×4, Zone 2, yoga flows, mobility, Murph builder, Cindy, Murph, recovery days, travel reset) and a quick log for anything else (Krav class, walks, rides, PT visits, ski days…). There's also a history and a 249-exercise library, filtered to **At home**, **Gym only** or **All**, with knee, back and shoulder flags, cues and notes on every exercise.

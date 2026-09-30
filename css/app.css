@@ -238,6 +238,7 @@ details.acc > .acc-body { padding: 0 14px 14px; }
 .ds-day.miss { border-style: dashed; border-color: var(--border2); }
 .ds-day.miss b, .ds-day.pre b { color: var(--muted); }
 .ds-day.pre { opacity: 0.45; }
+.ds-day.trip small { color: var(--sky); letter-spacing: 0.02em; }
 .ds-day.today small { color: var(--accent); }
 .ds-day.sel { background: var(--sky-dim); border: 1px solid var(--sky); }
 .ds-day.sel b, .ds-day.sel small { color: var(--sky); }

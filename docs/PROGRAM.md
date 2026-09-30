@@ -87,6 +87,7 @@ This is how Forge builds each day and week, written so a physical therapist can 
   - Zone 2 becomes a long walk.
   - Weekly quests scale to the days away.
   - A 10-minute "travel-day reset" handles flights.
+  - Forgot to turn it on (or off)? Open a past day and tap "Was away", or the trip's dates, to add, move or remove the trip. The weekly quests for those weeks rescale.
 
 ## Fuel
 
