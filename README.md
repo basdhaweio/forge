@@ -4,6 +4,8 @@ A gamified training, rehab and nutrition tracker. It plans each day around injur
 
 **Live:** https://basdhaweio.github.io/forge/
 
+**Android app** (with a home-screen widget and long-press shortcuts): https://github.com/basdhaweio/forge/releases/download/android-latest/forge.apk. See [android/README.md](android/README.md).
+
 Same stack as Canto: a static PWA, vanilla JS with no build step, installable on a phone, and working offline. Your data stays in the browser, with backup and restore available.
 
 ## What it does
@@ -51,6 +53,7 @@ data/program.json           slots, sessions, schedule, quests, achievements, fas
 docs/PROGRAM.md             how the training is structured — share with your PT
 docs/CONTENT-SCHEMA.md      JSON reference for editing content
 docs/ROADMAP.md             what's deferred
+android/                    the Android app: a WebView shell on the live site, the widget, shortcuts (CI builds the APK)
 tools/validate.py           checks the content + that every slot resolves at home/hotel/gym, per phase, on flare days
 tools/serve.py              local dev server with caching off
 tools/make_icons.py         renders the icons (standard library only)
