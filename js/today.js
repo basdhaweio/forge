@@ -33,6 +33,15 @@
     toast(`${task.label} logged${forDay(date)}`, 2600, { label: 'Undo', run: () => { F.store.removeSession(rec.id); F.app.render(); } });
     F.game.afterChange();
   }
+  // One tap from outside the page (the Android widget's PT button): the same as ticking the quest on Today.
+  F.tickTask = (id, date = F.ui.today()) => {
+    const t = F.game.dailyTasksOn(date).find((x) => x.id === id && x.kind === 'session');
+    if (!t) return;
+    const day = F.game.compute().days[date];
+    if (day && day.tasks && day.tasks.has(id)) { toast(`${t.label} is already done today`, 2400); return; }
+    quickComplete(t, date);
+    F.app.render();
+  };
   function undoTask(task, date) {
     const S = F.store.load();
     const autos = S.sessions.filter((x) => x.date === date && x.auto && x.taskId === task.id);

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="forge_bg">#0D0E11</color>
+    <color name="widget_bg">#F215171C</color>
+    <color name="widget_text">#EEF0F4</color>
+    <color name="widget_muted">#8E95A3</color>
+    <color name="widget_btn">#282C35</color>
+    <color name="widget_track">#1D2027</color>
+    <color name="widget_accent">#FF7A1A</color>
+    <color name="widget_accent2">#FFB020</color>
+    <color name="widget_sky">#60A5FA</color>
+    <color name="widget_purple">#A78BFA</color>
+</resources>

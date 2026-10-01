@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the Forge icon. Each opens the app on an action URL; the page does the rest (js/native.js). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="water"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_water"
+        android:shortcutShortLabel="@string/shortcut_water"
+        android:shortcutLongLabel="@string/shortcut_water_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.basdhaweio.forge"
+            android:targetClass="io.basdhaweio.forge.MainActivity"
+            android:data="https://basdhaweio.github.io/forge/#/do/water" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="pt"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_pt"
+        android:shortcutShortLabel="@string/shortcut_pt"
+        android:shortcutLongLabel="@string/shortcut_pt_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.basdhaweio.forge"
+            android:targetClass="io.basdhaweio.forge.MainActivity"
+            android:data="https://basdhaweio.github.io/forge/#/do/pt" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="fast"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_fast"
+        android:shortcutShortLabel="@string/shortcut_fast"
+        android:shortcutLongLabel="@string/shortcut_fast_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.basdhaweio.forge"
+            android:targetClass="io.basdhaweio.forge.MainActivity"
+            android:data="https://basdhaweio.github.io/forge/#/do/fast" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="log"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_log"
+        android:shortcutShortLabel="@string/shortcut_log"
+        android:shortcutLongLabel="@string/shortcut_log_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.basdhaweio.forge"
+            android:targetClass="io.basdhaweio.forge.MainActivity"
+            android:data="https://basdhaweio.github.io/forge/#/do/log" />
+    </shortcut>
+</shortcuts>

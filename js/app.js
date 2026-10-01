@@ -14,6 +14,7 @@ F.app = (() => {
     const { seg } = parse();
     const S = F.store.load();
     if (!S.profile.onboarded && seg[0] !== 'welcome') { location.replace('#/welcome'); return; }
+    if (seg[0] === 'do') { F.native.act(seg[1], seg[2]); return; }   // widget / shortcut actions
     const view = document.getElementById('view');
     const same = lastHash === location.hash;
     const y = window.scrollY;
@@ -68,12 +69,14 @@ F.app = (() => {
     stk.textContent = '🔥 ' + C.streak.current;
     stk.classList.toggle('cold', !C.streak.activeToday);
     stk.title = C.streak.activeToday ? 'Active today' : 'Log anything today to keep the streak';
+    F.native.push();
   }
 
   function theme() {
     const t = F.store.load().settings.theme;
     const dark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    F.native.theme(dark);
     const meta = document.querySelector('meta[name=theme-color]');
     if (meta) meta.content = dark ? '#0d0e11' : '#f5f3ef';
   }

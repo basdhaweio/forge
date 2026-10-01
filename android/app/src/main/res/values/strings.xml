@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Forge</string>
+    <string name="widget_label">Forge</string>
+    <string name="widget_description">Streak, level, today\'s quests, protein, water and a running fast, with one-tap water, PT, fast and log.</string>
+    <string name="btn_water">💧 +16 oz</string>
+    <string name="btn_pt">🛡️ PT</string>
+    <string name="btn_fast">⏳ Fast</string>
+    <string name="btn_log">＋ Log</string>
+    <string name="placeholder_streak">🔥 0</string>
+    <string name="placeholder_level">Forge</string>
+    <string name="placeholder_day">Open Forge once and this fills in</string>
+    <string name="placeholder_protein">🍗 protein</string>
+    <string name="placeholder_water">💧 water</string>
+    <string name="placeholder_status">tap to open Forge</string>
+    <string name="fast_icon">"⏳ "</string>
+    <string name="shortcut_water">Water</string>
+    <string name="shortcut_water_long">Log a drink of water</string>
+    <string name="shortcut_fast">Fast</string>
+    <string name="shortcut_fast_long">Start or check your fast</string>
+    <string name="shortcut_log">Log</string>
+    <string name="shortcut_log_long">Log an activity, food or measurements</string>
+    <string name="shortcut_pt">PT done</string>
+    <string name="shortcut_pt_long">Tick today\'s PT routine</string>
+</resources>

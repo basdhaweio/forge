@@ -48,6 +48,25 @@
   }
 
   // ---------- onboarding ----------
+  // Moving to a new device or the Android app: replace this (empty) copy with a backup file from Settings → Your data.
+  function restoreFile() {
+    const inp = h('input', { type: 'file', accept: '.json,application/json', hidden: true });
+    inp.addEventListener('change', async () => {
+      const f = inp.files[0];
+      inp.remove();
+      if (!f) return;
+      try {
+        F.store.importJSON(await f.text(), 'replace');
+        toast('Backup restored — welcome back');
+        F.game.afterChange();
+        location.hash = F.store.load().profile.onboarded ? '#/' : '#/welcome/1';
+        F.app.render();
+      } catch (e) { toast('That file isn’t a Forge backup: ' + e.message, 4000); }
+    });
+    document.body.append(inp);
+    inp.click();
+  }
+
   F.views.welcome = (stepArg) => {
     const st = S(), P = F.data.prog();
     const step = Math.max(0, Math.min(6, +stepArg || 0));
@@ -66,7 +85,8 @@
           h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Units' }), seg([{ v: 'imperial', label: 'lb · in · mi' }, { v: 'metric', label: 'kg · cm · km' }], st.profile.units, (v) => { st.profile.units = v; save(); }))),
         h('p', { class: 'tiny muted mt', text: 'Everything you enter stays in this browser on this device. Nothing is sent anywhere. Back it up from Settings.' }),
         nav(() => go(1), 'Let’s set up'),
-        h('p', { class: 'small muted mt center' }, 'Already use Forge on another device? ', h('a', { href: '#/welcome', onClick: (e) => { e.preventDefault(); F.syncSheet(() => { location.hash = F.store.load().profile.onboarded ? '#/' : '#/welcome/1'; }); } }, 'Connect sync to bring your data over')));
+        h('p', { class: 'small muted mt center' }, 'Already use Forge on another device? ', h('a', { href: '#/welcome', onClick: (e) => { e.preventDefault(); F.syncSheet(() => { location.hash = F.store.load().profile.onboarded ? '#/' : '#/welcome/1'; }); } }, 'Connect sync to bring your data over'),
+          ' or ', h('a', { href: '#/welcome', onClick: (e) => { e.preventDefault(); restoreFile(); } }, 'restore a backup file'), '.'));
     } else if (step === 1) {
       const p = st.profile;
       wrap.append(h('h1', { text: 'About you' }), h('p', { class: 'muted mb', text: 'Used for calorie burn, heart-rate zones for the 4×4 and a protein target. Skip anything you like.' }),
@@ -369,6 +389,7 @@
   }
 
   function download(name, text) {
+    if (F.native.saveFile(name, text)) return;   // the Android app saves the file (a WebView can't download)
     const blob = new Blob([text], { type: 'application/json' });
     const a = h('a', { href: URL.createObjectURL(blob), download: name });
     document.body.append(a); a.click(); a.remove();

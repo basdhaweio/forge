@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Forge's palette (css/app.css :root, light theme); night values in values-night -->
+    <color name="forge_bg">#F5F3EF</color>
+    <color name="forge_icon_bg">#15171C</color>
+    <color name="forge_accent">#FF7A1A</color>
+    <color name="widget_bg">#F2FFFFFF</color>
+    <color name="widget_text">#1B1D22</color>
+    <color name="widget_muted">#5F6673</color>
+    <color name="widget_btn">#EFEBE5</color>
+    <color name="widget_track">#E3DDD4</color>
+    <color name="widget_accent">#E8590C</color>
+    <color name="widget_accent2">#C77700</color>
+    <color name="widget_sky">#2563EB</color>
+    <color name="widget_purple">#7C3AED</color>
+</resources>

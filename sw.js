@@ -1,9 +1,9 @@
 /* Forge service worker: app shell cached, program JSON network-first. */
-const VERSION = 'forge-v12';
+const VERSION = 'forge-v13';
 const SHELL = [
   './', './index.html', './manifest.json', './css/app.css',
   './js/ui.js', './js/store.js', './js/data.js', './js/game.js', './js/timer.js', './js/player.js',
-  './js/today.js', './js/train.js', './js/fuel.js', './js/body.js', './js/hero.js', './js/settings.js', './js/sync.js', './js/app.js',
+  './js/today.js', './js/train.js', './js/fuel.js', './js/body.js', './js/hero.js', './js/settings.js', './js/sync.js', './js/native.js', './js/app.js',
   './data/exercises.json', './data/program.json',
   './icons/icon-192.png', './icons/icon-512.png'
 ];
