@@ -108,7 +108,7 @@ This is how Forge builds each day and week, written so a physical therapist can 
 
   On a fast day (a fast covers 12 hours or more of it, counting the running fast through its target), Hit protein and Log food are off, and that week's protein-days target drops by one. Water still counts.
 
-  XP is fixed for 24 h and 36 h; nothing extra is earned for going longer. Ending early is framed as a good call, and 16 h+ still earns a little XP. Don't fast on diabetes medication, when underweight or unwell, or with a history of disordered eating.
+  XP builds hour by hour after the first 12 hours (an ordinary night): 60 at 16 h, 150 at 24 h, 200 at 36 h, and nothing extra for going longer. Ending early is framed as a good call and still earns the hours you did; the running timer shows the XP so far. Don't fast on diabetes medication, when underweight or unwell, or with a history of disordered eating.
 
 ## Gamification
 

@@ -43,8 +43,17 @@ F.game = (() => {
   }
   function suggestKcal() { const b = bmr(); return b ? Math.round((b * 1.45 - 300) / 50) * 50 : null; }
   const e1rm = (w, r) => (w && r ? w * (1 + Math.min(r, 15) / 30) : 0);
-  // XP for a finished fast: fixed at 24 h and 36 h, a little for 16 h+, nothing extra for going longer.
-  const fastXP = (hrs) => (hrs >= 36 ? 200 : hrs >= 24 ? 150 : hrs >= 16 ? 60 : 0);
+  // XP for a fast builds hour by hour after the first 12 (an ordinary night): 60 at 16 h, 150 at 24 h, 200 at 36 h,
+  // and nothing extra beyond that. Ending early still earns the hours that were done.
+  const FAST_XP = [[12, 0], [16, 60], [24, 150], [36, 200]];
+  function fastXP(hrs) {
+    if (!(hrs > FAST_XP[0][0])) return 0;
+    for (let i = 1; i < FAST_XP.length; i++) {
+      const [h0, x0] = FAST_XP[i - 1], [h1, x1] = FAST_XP[i];
+      if (hrs <= h1) return Math.round(x0 + ((hrs - h0) / (h1 - h0)) * (x1 - x0));
+    }
+    return FAST_XP[FAST_XP.length - 1][1];
+  }
 
   // ---------- levels ----------
   function titleFor(L) { let t = 'Recruit'; for (const [lv, name] of F.data.prog().titles) if (L >= lv) t = name; return t; }

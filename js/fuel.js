@@ -332,7 +332,9 @@
       sa.all.forEach((st, k) => stagesBar.append(h('i', { class: k < sa.i ? 'on' : k === sa.i ? 'cur' : '', title: `${st.h} h · ${st.name}` })));
       stageBox.replaceChildren(h('div', { class: 'stage-now' }, h('span', { class: 'si', text: sa.cur.icon }), h('div', null, h('b', { text: sa.cur.name + ' · ' + sa.cur.h + ' h+' }), h('div', { class: 'small muted', text: sa.cur.desc }))));
       const endAt = f.start + f.targetH * 3.6e6;
-      meta.textContent = (sa.next ? `Next: ${sa.next.name} in ${hm(sa.next.h - hrs)} · ` : '') + (hrs < f.targetH ? `Target ${f.targetH} h at ${when(endAt)}` : `Target reached ${hm(hrs - f.targetH)} ago`);
+      const xpNow = F.game.fastXP(hrs);
+      meta.textContent = (sa.next ? `Next: ${sa.next.name} in ${hm(sa.next.h - hrs)} · ` : '') + (hrs < f.targetH ? `Target ${f.targetH} h at ${when(endAt)}` : `Target reached ${hm(hrs - f.targetH)} ago`)
+        + (xpNow ? ` · +${xpNow} XP so far` : ' · XP starts after 12 h');
     };
     paint();
     const iv = setInterval(() => { if (!document.body.contains(card)) { clearInterval(iv); return; } paint(); }, 1000);
@@ -375,7 +377,7 @@
       const hrs = (tp.get() - f.start) / 3.6e6, xp = F.game.fastXP(hrs);
       note.className = 'callout small' + (hrs <= 0 ? ' amber' : xp ? ' green' : '');
       note.replaceChildren(h('b', { text: hrs <= 0 ? 'That’s before the fast started.' : hrs >= f.targetH ? `You made it — ${hm(hrs)}.` : hrs >= 24 ? `${hm(hrs)} — past the 24-hour mark.` : `${hm(hrs)} fasted.` }),
-        hrs <= 0 ? '' : ' ' + (hrs >= 24 ? `+${xp} XP. Break it with a protein-forward, normal-sized meal.` : hrs >= 16 ? `Short of 24 h but it still counts (+${xp} XP). Ending when your body says so is the right call.` : 'Under 16 hours doesn’t earn fast XP, but it’s logged. No harm in stopping.'));
+        hrs <= 0 ? '' : ' ' + (hrs >= 24 ? `+${xp} XP. Break it with a protein-forward, normal-sized meal.` : xp ? `+${xp} XP for the hours you did. Ending when your body says so is the right call.` : 'The first 12 hours don’t earn fast XP, but it’s logged. No harm in stopping.'));
     };
     const tp = timePicker(Date.now(), [{ t: Date.now(), label: 'Just now' }], paint);
     const sh = sheet(h('div', { class: 'stack' },
@@ -408,7 +410,7 @@
     const paint = () => {
       const r = read(), bad = problem(r), xp = bad ? 0 : F.game.fastXP(r.hrs);
       note.className = 'callout small' + (bad ? ' amber' : xp ? ' green' : '');
-      note.textContent = bad || `${hm(r.hrs)} fasted${xp ? ` · +${xp} XP` : ' — under 16 hours earns no fast XP, but it’s logged'}.`;
+      note.textContent = bad || `${hm(r.hrs)} fasted${xp ? ` · +${xp} XP` : ' — the first 12 hours earn no fast XP, but it’s logged'}.`;
     };
     startIn.addEventListener('input', paint);
     endIn.addEventListener('input', paint);
