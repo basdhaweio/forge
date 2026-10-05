@@ -60,6 +60,87 @@
     draw();
   };
 
+  // ---------- quick sets: one exercise, a few sets, logged in one go (no session, no timer) ----------
+  const QUICK_MET = { strength: 5, core: 4, iso: 3, carry: 6, pt: 2.5, mobility: 2.5, yoga: 2.5, krav: 7, conditioning: 7 };
+  const quickable = (e, c) => !!e && e.log !== 'dt' && !(e.tags || []).includes('avoid') && F.data.allowed(e, c);
+
+  // What to offer first: what you've logged lately, then the strength staples as they'd be built for that day
+  // (so they fit the equipment, the phase and the knee/back check-in).
+  F.quickPicks = (date = F.ui.today(), { exclude } = {}) => {
+    const S = F.store.load(), c = F.data.ctx(date), out = [], seen = new Set(exclude || []);
+    const add = (id) => { if (!id || out.length >= 12 || seen.has(id)) return; seen.add(id); const e = F.data.ex(id); if (quickable(e, c)) out.push(e); };
+    for (let i = S.sessions.length - 1; i >= 0 && out.length < 6; i--) for (const en of S.sessions[i].entries || []) if (!en.kind) add(en.ex);
+    for (const id of ['strA', 'strB', 'strC']) {
+      let plan;
+      try { plan = F.data.buildPlan(id, date); } catch (e) { continue; }
+      for (const b of plan.blocks) if (b.type === 'sets') for (const it of b.items) if (!it.why) add(it.ex);
+    }
+    return out;
+  };
+
+  F.exercisePicker = ({ date = F.ui.today(), title = 'Pick an exercise', onPick } = {}) => {
+    const c = F.data.ctx(date);
+    const picks = F.quickPicks(date);
+    const all = F.data.exercises().filter((e) => quickable(e, c));
+    const input = h('input', { type: 'search', placeholder: 'Search exercises', autocomplete: 'off' });
+    const list = h('div', { class: 'list mt' });
+    const row = (e) => h('div', { class: 'item', onClick: () => { sh.close(); onPick(e); } },
+      h('span', { class: 'emo', text: F.data.stat(e.stat).icon }), h('div', { class: 't' }, h('b', { text: e.name }), h('small', { text: e.cues[0] || '' })), F.flagsRow(e));
+    const draw = () => {
+      const q = input.value.trim().toLowerCase();
+      list.innerHTML = '';
+      if (!q) list.append(h('div', { class: 'eyebrow', text: 'Suggested' }), picks.map(row), h('div', { class: 'eyebrow mt', text: 'Everything that fits today' }));
+      const hits = q ? all.filter((e) => e.name.toLowerCase().includes(q) || (e.tags || []).some((t) => t.includes(q))) : all.filter((e) => !picks.includes(e));
+      list.append(hits.map(row));
+      if (q && !hits.length) list.append(h('div', { class: 'small muted', text: 'Nothing that fits today matches that.' }));
+    };
+    let t;
+    input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(draw, 100); });
+    const sh = sheet(h('div', null, h('h2', { text: title }), input, list));
+    draw();
+  };
+
+  F.quickSets = (id, { date = F.ui.today() } = {}) => {
+    const e = F.data.ex(id);
+    if (!e) return;
+    const today = F.ui.today();
+    const it = { reps: e.log === 'h' || e.log === 'ws' ? null : '8-12', hold: e.log === 'h' ? '20-40' : null, secs: e.log === 'ws' ? '30-40' : null };
+    const t = F.data.targetFor(e, it, date), last = F.data.lastSummary(e, date);
+    const setsIn = F.ui.numIn(3, { step: 1 });
+    const repsIn = e.log === 'wr' || e.log === 'r' ? F.ui.numIn(t.r || 10, { step: 1 }) : null;
+    const wIn = e.log === 'wr' || e.log === 'ws' ? F.ui.numIn(F.u.wv(t.w), { placeholder: 'optional' }) : null;
+    const sIn = e.log === 'h' || e.log === 'ws' ? F.ui.numIn(t.s || 30, { step: 5 }) : null;
+    const field = (label, el) => h('label', { class: 'field', style: { marginBottom: 0 } }, h('span', { text: label }), el);
+    const sh = sheet(h('div', { class: 'stack' },
+      h('div', null, h('div', { class: 'eyebrow', text: '⚡ Quick sets' + (date === today ? '' : ' · ' + F.ui.fmtDate(date)) }), h('h2', { text: e.name })),
+      h('div', { class: 'small muted', text: last ? 'Last time ' + last : e.log === 'wr' ? 'First time: pick a weight you could lift about 14 times.' : 'First time logging this one.' }),
+      F.flagsRow(e),
+      h('div', { class: 'fieldrow' }, field('Sets', setsIn), repsIn ? field(e.side ? 'Reps / side' : 'Reps', repsIn) : null,
+        wIn ? field(F.u.wu() + (e.pair ? ' each' : ''), wIn) : null, sIn ? field(e.side ? 'Seconds / side' : 'Seconds', sIn) : null),
+      h('button', { class: 'btn fire big block', onClick: logIt }, icon('check', 18), 'Log it')));
+    function logIt() {
+      const n = Math.max(1, Math.min(10, Math.round(+setsIn.value || 3)));
+      const r = repsIn ? Math.round(+repsIn.value || 0) : null;
+      const w = wIn && wIn.value !== '' ? F.u.wIn(+wIn.value) : null;
+      const s = sIn ? Math.round(+sIn.value || 0) : null;
+      if ((repsIn && !(r > 0)) || (sIn && !(s > 0))) { toast(repsIn ? 'Add the reps' : 'Add the seconds'); return; }
+      const c = F.data.ctx(date), met = QUICK_MET[e.cat] || 4;
+      const minutes = Math.max(1, Math.round(n * (s ? (s * (e.side ? 2 : 1)) / 60 + 1 : 1.5)));
+      const rec = { date, tpl: null, act: 'sets', title: e.name, icon: F.data.stat(e.stat).icon, tags: ['quick'], stat: e.stat, met, phase: c.phase, loc: c.loc,
+        minutes, kcal: F.game.kcal(met, minutes), entries: [{ ex: e.id, sets: Array.from({ length: n }, () => ({ w, r, s, done: true })) }] };
+      rec.prs = F.game.detectPRs(rec);
+      const x = F.game.sessionXP(rec);
+      rec.xp = x.xp; rec.split = x.split;
+      F.store.addSession(rec);
+      sh.close();
+      F.ui.xpFloat(rec.xp, F.data.stat(e.stat).icon);
+      F.timer.sfx('pop');
+      toast(`${e.name} ${n} × ${r ? r : s + ' s'} logged${rec.prs.length ? ' · 🎉 new record' : ''}`, 2800, { label: 'Undo', run: () => { F.store.removeSession(rec.id); F.app.render(); } });
+      F.game.afterChange();
+      F.app.render();
+    }
+  };
+
   // ---------- exercise sheet ----------
   F.exSheet = (id) => {
     const e = F.data.ex(id);
@@ -84,6 +165,7 @@
     if (T.holdBest[id]) best.push('longest hold ' + mmss(T.holdBest[id]));
     if (T.carryMax[id]) best.push('heaviest carry ' + F.u.w(T.carryMax[id]));
     if (best.length) body.append(h('div', { class: 'callout green mt small' }, h('b', { text: 'Your records: ' }), best.join(' · ')));
+    if (e.log !== 'dt') body.append(h('div', { class: 'btngroup mt' }, h('button', { class: 'btn fire', onClick: () => { sh.close(); F.quickSets(id); } }, icon('plus', 15), 'Log sets')));
     const hist = F.store.load().sessions.filter((s) => (s.entries || []).some((en) => en.ex === id && !en.kind)).slice(-5).reverse();
     if (hist.length) {
       body.append(h('div', { class: 'eyebrow mt', text: 'Recent' }));
@@ -102,7 +184,7 @@
         toast(prefs[k] === id ? `${e.name} is now your go-to for ${name}` : 'Preference cleared');
       } }))), h('div', { class: 'tiny muted mt-s', text: 'Tap a slot to make this your go-to whenever it fits your equipment and today’s check-in.' }));
     }
-    sheet(body);
+    const sh = sheet(body);
   };
 
   // ---------- views ----------

@@ -19,7 +19,8 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
   - A **flare-up** check-in swaps the day to a recovery session. Recovery days keep the streak and earn bonus XP.
   - **Low energy** trims optional sets.
 - **Train**: 29 guided sessions (strength A/B/C, gym days A/B, TRX, Krav, Norwegian 4×4, Zone 2, yoga flows, mobility, Murph builder, Cindy, Murph, recovery days, travel reset) and a quick log for anything else (Krav class, walks, rides, PT visits, ski days…). There's also a history and a 249-exercise library, filtered to **At home**, **Gym only** or **All**, with knee, back and shoulder flags, cues and notes on every exercise.
-- **Player**: logs sets with targets taken from your history (double progression; holds go up 5 s each time). It also has:
+- **Quick sets**: tap any exercise (under today's mission, in the + menu, in the Library, or "Add an exercise" inside a session), adjust 3 × 10, log it. No session and no timer; it still earns XP, keeps the streak and can set a record.
+- **Player**: the session clock waits for the first thing you log, so opening a session just to read it costs nothing (and it closes again if you leave without logging). It logs sets with targets taken from your history (double progression; holds go up 5 s each time). It also has:
   - Swap for any slot, and the swap is remembered
   - A rest timer
   - A full-screen interval timer with heart-rate zones for the 4×4

@@ -33,7 +33,9 @@
   F.activeMs = (A) => Math.max(0, (A.pausedAt || Date.now()) - A.start - (A.pausedMs || 0));
   const pauseClock = (A) => { if (!A.pausedAt) A.pausedAt = Date.now(); };
   const resumeClock = (A) => { if (A.pausedAt) { A.pausedMs = (A.pausedMs || 0) + (Date.now() - A.pausedAt); A.pausedAt = null; } };
-  function restartClock(A) { A.start = Date.now(); A.pausedMs = 0; A.pausedAt = null; A.lastAct = Date.now(); if (!A.backfill) A.plan.date = F.ui.today(); }
+  function restartClock(A) { A.start = Date.now(); A.pausedMs = 0; A.pausedAt = null; A.lastAct = Date.now(); A.fresh = false; if (!A.backfill) A.plan.date = F.ui.today(); }
+  // A new session waits with its clock stopped (fresh) until the first thing is logged, so opening one to read costs nothing.
+  const newActive = (src, plan, extra) => Object.assign({ src, plan, start: Date.now(), express: false, lastAct: Date.now(), pausedMs: 0, pausedAt: Date.now(), fresh: true }, extra);
   // Has anything been ticked or logged in this session?
   F.activeProgress = (A) => !!A && A.plan.blocks.some((pb) => (pb.type === 'sets' && pb.items.some((it) => it.sets.some((z) => z.done)))
     || ((pb.type === 'list' || pb.type === 'flow') && pb.items.some((it) => it.done || (it.bubbles && it.bubbles.some(Boolean))))
@@ -45,6 +47,7 @@
     const S = F.store.load();
     date = date || F.ui.today();
     const backfill = date < F.ui.today();
+    if (S.active && S.active.fresh && !F.activeProgress(S.active) && !(S.active.src === id && S.active.plan.date === date)) S.active = null;   // only opened to read
     if (S.active) {
       if (S.active.src === id && S.active.plan.date === date) {
         // Reopened from that day's page once the day has passed: finish it as a fill-in, so it stays on that day.
@@ -55,7 +58,7 @@
       if (!ok) { location.hash = '#/play'; return; }
     }
     try {
-      S.active = { src: id, plan: F.data.buildPlan(id, date, { loc }), start: Date.now(), express: false, lastAct: Date.now(), pausedMs: 0, pausedAt: null, backfill };
+      S.active = newActive(id, F.data.buildPlan(id, date, { loc }), { backfill });
     } catch (e) { toast(e.message, 3000); return; }
     F.store.saveNow();
     location.hash = '#/play';
@@ -115,38 +118,48 @@
     const S = F.store.load();
     const A = S.active;
     if (!A) return h('div', { class: 'empty' }, 'No session in progress. ', h('a', { href: '#/', text: 'Back to Today' }));
+    // Opened on an earlier day and never started: just plan it for today.
+    if (A.fresh && !A.backfill && A.plan.date !== F.ui.today() && !F.activeProgress(A)) { A.plan = F.data.buildPlan(A.src, F.ui.today()); A.start = A.pausedAt = Date.now(); A.pausedMs = 0; F.store.save(); }
     const plan = A.plan;
     const persist = () => F.store.save();
     // Any logging action counts as activity, and un-pauses a paused clock.
     const save = () => {
       A.lastAct = Date.now();
-      if (A.pausedAt) { resumeClock(A); paintClock(); toast('Timer resumed', 1400); }
+      if (A.pausedAt) { resumeClock(A); paintClock(); if (!A.fresh) toast('Timer resumed', 1400); }
+      A.fresh = false;
       F.store.save();
     };
+    // Starting a timer, a guided flow or a hold starts the session clock too.
+    const begin = () => { if (A.fresh || A.pausedAt) save(); };
     const wrap = h('div', { class: 'player' });
     const clockTxt = h('span', { class: 'clock' });
     const clockIco = h('span', { class: 'ci' });
-    const clockBtn = h('button', { class: 'clockbtn', onClick: () => { if (A.pausedAt) resumeClock(A); else pauseClock(A); persist(); paintClock(); } }, clockIco, clockTxt);
-    let shownPaused = null;
+    const clockBtn = h('button', { class: 'clockbtn', onClick: () => { if (A.pausedAt) resumeClock(A); else pauseClock(A); A.fresh = false; persist(); paintClock(); } }, clockIco, clockTxt);
+    let shownState = null;
     function paintClock() {
       const s = F.activeMs(A) / 1000;
       clockTxt.textContent = s >= 3600 ? F.ui.hms(s) : mmss(s);
-      const p = !!A.pausedAt;
-      if (p !== shownPaused) {
-        shownPaused = p;
-        clockIco.replaceChildren(icon(p ? 'play' : 'pause', 14));
-        clockBtn.classList.toggle('paused', p);
-        clockBtn.setAttribute('aria-label', p ? 'Session timer paused — tap to resume' : 'Pause the session timer');
-        clockBtn.title = p ? 'Paused — tap to resume' : 'Tap to pause';
+      const state = A.fresh ? 'ready' : A.pausedAt ? 'paused' : 'running';
+      if (state !== shownState) {
+        shownState = state;
+        clockIco.replaceChildren(icon(state === 'running' ? 'pause' : 'play', 14));
+        clockBtn.classList.toggle('paused', state !== 'running');
+        clockBtn.classList.toggle('ready', state === 'ready');
+        const tip = { ready: 'Not started — starts when you log something, or tap to start it now', paused: 'Paused — tap to resume', running: 'Tap to pause' }[state];
+        clockBtn.setAttribute('aria-label', tip);
+        clockBtn.title = tip;
       }
     }
     const bf = !!A.backfill;   // filling in a past day: no clock, no timers
     const home = bf ? '#/day/' + plan.date : '#/';
-    if (!bf) {
-      paintClock();
-      const iv = setInterval(paintClock, 1000);
-      wrap._cleanup = () => clearInterval(iv);
-    }
+    let iv = null;
+    if (!bf) { paintClock(); iv = setInterval(paintClock, 1000); }
+    // Opened just to read (nothing logged, clock never started)? Leaving lets it go, so it doesn't sit on Today.
+    wrap._cleanup = () => {
+      if (iv) clearInterval(iv);
+      const S2 = F.store.load();
+      if (location.hash !== '#/play' && S2.active === A && A.fresh && !F.activeProgress(A)) { S2.active = null; F.timer.stopRest(); F.store.save(); }
+    };
     const L = F.data.loc(plan.loc);
     wrap.append(h('div', { class: 'player-head' },
       h('a', { class: 'iconbtn', href: home, 'aria-label': bf ? 'Back to that day (this stays open)' : 'Back to Today (session stays open)' }, icon('back')),
@@ -179,7 +192,7 @@
       async function startOver() {
         sh.close();
         if (!(await confirmDlg('Clear everything ticked and start fresh?', { ok: 'Start over', danger: true }))) return;
-        F.store.load().active = { src: A.src, plan: F.data.buildPlan(A.src, bf ? plan.date : F.ui.today()), start: Date.now(), express: A.express, lastAct: Date.now(), pausedMs: 0, pausedAt: null, backfill: bf };
+        F.store.load().active = newActive(A.src, F.data.buildPlan(A.src, bf ? plan.date : F.ui.today()), { express: A.express, backfill: bf });
         F.timer.stopRest(); F.store.saveNow(); F.app.render();
       }
       async function discard() {
@@ -202,6 +215,30 @@
     }
     const blocksEl = h('div');
     wrap.append(blocksEl);
+    // Add anything else as you go: tap an exercise and it joins the session with three sets.
+    const addEl = h('div');
+    function addExercise(e) {
+      let pb = plan.blocks.find((b) => b.added);
+      if (!pb) { pb = { name: 'Added', type: 'sets', core: true, rounds: 0, rest: 60, log: [], progress: false, max: 0, items: [], done: false, vals: {}, added: true }; plan.blocks.push(pb); }
+      const it = { ex: e.id, slot: null, alts: [], why: null, dose: null, secs: e.log === 'ws' ? '30-40' : null, reps: e.log === 'h' || e.log === 'ws' ? null : '8-12', hold: e.log === 'h' ? '20-40' : null, rest: 60, sets: [], done: false };
+      const t = F.data.targetFor(e, it, plan.date);
+      it.target = t; it.last = F.data.lastSummary(e, plan.date);
+      it.sets = Array.from({ length: 3 }, () => ({ w: t.w ?? null, r: t.r ?? null, s: t.s ?? null, done: false }));
+      pb.items.push(it);
+      F.store.save();
+      renderBlocks(); drawAdd();
+      const cards = blockEls[plan.blocks.indexOf(pb)].querySelectorAll('.excard');
+      if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function drawAdd() {
+      const have = new Set(plan.blocks.flatMap((b) => b.items.map((it) => it.ex)));
+      const picks = F.quickPicks(plan.date, { exclude: have }).slice(0, 8);
+      addEl.innerHTML = '';
+      addEl.append(h('div', { class: 'section-title' }, h('h2', { text: 'Add an exercise' }), h('span', { class: 'small muted', text: 'tap to add 3 sets' })),
+        h('div', { class: 'chips' }, picks.map((e) => h('button', { class: 'chip', text: e.name, onClick: () => addExercise(e) })),
+          h('button', { class: 'chip', onClick: () => F.exercisePicker({ date: plan.date, title: 'Add an exercise', onPick: addExercise }) }, 'More…')));
+    }
+    wrap.append(addEl);
     wrap.append(h('div', { class: 'mt', style: { marginTop: '22px' } }, h('button', { class: 'btn fire big block', onClick: () => finish() }, icon('check', 18), bf ? 'Save session' : 'Finish session')));
 
     const blockEls = [];
@@ -291,7 +328,7 @@
       if (e.log === 'h') {
         if (bf) ins.append(F.ui.numIn(z.s, { placeholder: 's', step: 1, onInput: (v) => { z.s = v; save(); } }), h('span', { class: 'u', text: 's' + (e.side ? ' / side' : '') }));
         else if (z.done) ins.append(h('button', { class: 'holdval', title: 'Edit', onClick: () => editHold(z, bi) }, mmss(z.s || 0)), h('span', { class: 'u', text: e.side ? 'per side' : '' }));
-        else ins.append(h('button', { class: 'holdbtn', onClick: () => F.timer.hold({ title: e.name, target: z.s || (it.target && it.target.s) || 30, pr: bestHold(e.id), side: e.side, onDone: (secs) => { z.s = secs; z.done = true; afterSet(it, bi); } }) }, icon('timer', 16), 'Hold ' + mmss(z.s || 30)));
+        else ins.append(h('button', { class: 'holdbtn', onClick: () => { begin(); F.timer.hold({ title: e.name, target: z.s || (it.target && it.target.s) || 30, pr: bestHold(e.id), side: e.side, onDone: (secs) => { z.s = secs; z.done = true; afterSet(it, bi); } }); } }, icon('timer', 16), 'Hold ' + mmss(z.s || 30)));
       }
       const tick = h('button', { class: 'tick' + (z.done ? ' on' : ''), 'aria-label': 'Set done', onClick: () => {
         if (z.done) { z.done = false; save(); refresh(bi); return; }
@@ -346,6 +383,7 @@
       return card;
     }
     function startFlow(pb, bi) {
+      begin();
       const items = pb.items.filter((it) => !it.why && !it.done).map((it) => { const e = F.data.ex(it.ex); return { ref: it, name: e.name, secs: it.secs, reps: it.reps, side: !!(e.side && it.secs), cue: e.cues[0] }; });
       F.timer.flow({ title: plan.title, items, onItem: (i) => { items[i].ref.done = true; save(); }, onDone: () => refresh(bi) });
     }
@@ -363,7 +401,7 @@
       const names = live.map((it) => F.data.ex(it.ex));
       if (names.length > 1) card.append(h('div', { class: 'chips mt-s' }, names.map((e) => h('button', { class: 'chip small', text: e.name, onClick: () => F.exSheet(e.id) }))));
       if (!pb.done && bf) card.append(h('button', { class: 'btn block mt', onClick: () => { pb.done = true; F.timer.sfx('pop'); save(); refresh(bi); } }, icon('check', 16), 'Mark done'));
-      else if (!pb.done) card.append(h('button', { class: 'btn fire block mt', onClick: () => F.timer.run({ title: plan.title + ' · ' + pb.name, timer: t, cue: t.kind === 'amrap' && names.length ? names.map((e, i) => (live[i].reps || '') + ' ' + e.name).join(' · ') : '', onDone: ({ secs, rounds }) => { pb.done = true; pb.vals.secs = secs; if (t.kind === 'amrap') pb.vals.rounds = rounds; save(); refresh(bi); } }) }, icon('play', 16), 'Start timer'));
+      else if (!pb.done) card.append(h('button', { class: 'btn fire block mt', onClick: () => { begin(); F.timer.run({ title: plan.title + ' · ' + pb.name, timer: t, cue: t.kind === 'amrap' && names.length ? names.map((e, i) => (live[i].reps || '') + ' ' + e.name).join(' · ') : '', onDone: ({ secs, rounds }) => { pb.done = true; pb.vals.secs = secs; if (t.kind === 'amrap') pb.vals.rounds = rounds; save(); refresh(bi); } }); } }, icon('play', 16), 'Start timer'));
       else card.append(h('div', { class: 'row mt-s' }, pill(pb.vals.secs ? 'Done · ' + mmss(pb.vals.secs) : 'Done', 'green'), h('button', { class: 'btn xs ghost', text: bf ? 'Undo' : 'Run again', onClick: () => { pb.done = false; save(); refresh(bi); } })));
       const fields = (pb.log || []).slice();
       if (fields.length || !pb.done) {
@@ -414,7 +452,7 @@
       const raw = Math.max(1, Math.round(F.activeMs(A) / 60000));
       const est = plan.est || 30;
       const tooLong = !bf && raw > Math.max(est * 2.5, est + 45);
-      const mins = bf || tooLong ? est : raw;
+      const mins = bf || tooLong || A.fresh ? est : raw;
       const minIn = F.ui.numIn(mins, { step: 1 });
       let rpe = null, knee = 0, back = 0;
       const checks = {};
@@ -476,6 +514,7 @@
     }
 
     renderBlocks();
+    drawAdd();
     return wrap;
   };
 

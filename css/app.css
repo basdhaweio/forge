@@ -312,7 +312,8 @@ input.dayjump { width: auto; padding: 5px 9px; font-size: 0.83rem; border-radius
 .clockbtn .ci { display: inline-flex; opacity: 0.85; }
 .clockbtn.paused { color: var(--muted); border-style: dashed; }
 .clockbtn.paused .clock::after { content: ' paused'; font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.04em; }
-@media (max-width: 420px) { .clockbtn.paused .clock::after { content: ''; } .player-head .iconbtn { width: 32px; } }
+.clockbtn.ready .clock::after { content: ' ready'; }
+@media (max-width: 420px) { .clockbtn.paused .clock::after, .clockbtn.ready .clock::after { content: ''; } .player-head .iconbtn { width: 32px; } }
 .block { margin-top: 16px; }
 .block-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .block-head h3 { margin: 0; font-family: var(--display); font-size: 1.2rem; letter-spacing: 0.02em; }

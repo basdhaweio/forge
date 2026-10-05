@@ -156,6 +156,7 @@
           other ? dateIn : null),
         past ? h('div', { class: 'small muted mt-s', text: `Saves to ${F.ui.fmtDate(date, LONG)}.` }) : null,
         h('div', { class: 'list mt' },
+          item('⚡', 'Quick sets', 'A few sets of any exercise — no session, no timer', () => F.exercisePicker({ date, title: 'Quick sets', onPick: (e) => F.quickSets(e.id, { date }) })),
           item('🥋', 'Activity', 'Krav class, walk, ride, run, PT visit, anything', () => F.quickLog(null, { date })),
           item('🚶', 'Walk', 'Minutes, distance or steps', () => F.quickLog('walk', { date })),
           item('🍗', 'Food', 'Meals, protein, treats', () => F.foodSheet(date)),
@@ -220,7 +221,7 @@
       wrap.append(h('a', { class: 'card glow row nowrap', href: '#/play', style: { color: 'inherit' }, onClick: past ? (ev) => { ev.preventDefault(); F.startSession(A.src, { date }); } : null },
         h('span', { style: { fontSize: '1.6rem' }, text: A.plan.icon }),
         h('div', { class: 'grow' }, h('b', { text: (fill ? 'Finish logging ' : 'Resume ') + A.plan.title }),
-          h('div', { class: 'small muted', text: fill ? `For ${F.ui.fmtDate(A.plan.date, SHORT)} — not saved until you finish` : `${A.pausedAt ? 'Paused · ' : ''}${F.ui.dur(mins)} on the clock · opened ${F.ui.relDay(A.plan.date)}` })),
+          h('div', { class: 'small muted', text: fill ? `For ${F.ui.fmtDate(A.plan.date, SHORT)} — not saved until you finish` : A.fresh ? 'Open · nothing logged yet, the clock hasn’t started' : `${A.pausedAt ? 'Paused · ' : ''}${F.ui.dur(mins)} on the clock · opened ${F.ui.relDay(A.plan.date)}` })),
         h('button', { class: 'btn sm ghost', 'aria-label': 'Discard this session', title: 'Discard', onClick: discard }, icon('x', 14)),
         h('span', { class: 'btn sm primary' }, icon('play', 14), 'Resume')));
     }
@@ -357,7 +358,22 @@
     };
     if (sched.length) sched.forEach((r) => missions.append(missionCard(r)));
     else missions.append(h('div', { class: 'card' }, h('div', { class: 'mission' }, h('div', { class: 'emo', text: '🌿' }), h('div', { class: 't' }, h('div', { class: 'eyebrow', text: 'Rest day' }), h('b', { text: 'Recover and stay loose' }), h('div', { class: 'small muted', text: 'PT, holds, mobility and a walk still count toward the streak.' })))));
-    for (const x of doneToday) if (!sched.some((r) => r.id === x.tpl || r.id === x.src || (r.flare && r.flare.id === x.tpl))) missions.append(h('div', { class: 'card tight row nowrap' }, h('span', { text: x.icon || '✅' }), h('div', { class: 'grow' }, h('b', { text: x.title }), h('div', { class: 'small muted', text: `${F.ui.dur(x.minutes)} · +${num(x.xp)} XP` })), pill('done', 'green')));
+    // Or skip the session: a few sets of anything, logged in one go.
+    const picks = F.quickPicks(date).slice(0, 8);
+    missions.append(h('div', null,
+      h('div', { class: 'small muted', text: past ? 'Or log a few sets of anything you did:' : 'Or just do a few sets — tap one, log it, done:' }),
+      h('div', { class: 'chips mt-s' }, picks.map((e) => h('button', { class: 'chip', text: e.name, onClick: () => F.quickSets(e.id, { date: D() }) })),
+        h('button', { class: 'chip', onClick: () => F.exercisePicker({ date: D(), title: 'Quick sets', onPick: (e) => F.quickSets(e.id, { date: D() }) }) }, 'More…'))));
+    // Everything else done that day; quick sets of the same exercise share a row ("3×10, 3×12").
+    const doneRow = (emo, title, sub) => missions.append(h('div', { class: 'card tight row nowrap' }, h('span', { text: emo || '✅' }), h('div', { class: 'grow' }, h('b', { text: title }), h('div', { class: 'small muted', text: sub })), pill('done', 'green')));
+    const quickDone = {};
+    for (const x of doneToday) {
+      if (sched.some((r) => r.id === x.tpl || r.id === x.src || (r.flare && r.flare.id === x.tpl))) continue;
+      if (x.act === 'sets') { (quickDone[x.title] || (quickDone[x.title] = [])).push(x); continue; }
+      doneRow(x.icon, x.title, `${F.ui.dur(x.minutes)} · +${num(x.xp)} XP`);
+    }
+    const setsText = (x) => { const z = ((x.entries[0] || {}).sets || []); return z.length + '×' + (z[0] ? (z[0].r ? z[0].r : (z[0].s || 0) + ' s') : ''); };
+    for (const [title, list] of Object.entries(quickDone)) doneRow(list[0].icon, title, `${list.map(setsText).join(', ')} · +${num(list.reduce((a, x) => a + (x.xp || 0), 0))} XP`);
     wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: 'Mission' }), h('button', { class: 'btn xs ghost', onClick: () => pickSession(D()) }, icon('swap', 14), past ? 'Did something else' : 'Do something else')), missions));
 
     // ----- daily quests -----
