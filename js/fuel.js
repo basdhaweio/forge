@@ -272,7 +272,7 @@
     const tp = timePicker(earlier ? evenings.find((c) => new Date(c.t).getHours() === 20).t : now, [{ t: now, label: 'Just now' }].concat(evenings), paint);
     const sh = sheet(h('div', { class: 'stack' },
       h('h2', { text: '⏳ Start a fast' }),
-      h('div', { class: 'row between' }, h('span', { class: 'small muted', text: 'Target' }), F.ui.seg([{ v: 24, label: '24 h' }, { v: 36, label: '36 h' }], goal, (v) => { goal = v; paint(); })),
+      h('div', { class: 'row between' }, h('span', { class: 'small muted', text: 'Target' }), F.ui.seg([{ v: 16, label: '16 h' }, { v: 24, label: '24 h' }, { v: 36, label: '36 h' }], goal, (v) => { goal = v; paint(); })),
       h('div', null, h('b', { text: 'When did you finish your last meal?' }), h('div', { class: 'small muted', text: 'Didn’t start the timer at the time? Pick when you stopped eating and the clock catches up.' })),
       tp.el, note,
       h('button', { class: 'btn fire big block', onClick: () => {
@@ -288,18 +288,19 @@
     paint();
   };
 
-  // This week's fast as the cards describe it: the longest fast started this week, whether the 24 h quest is met,
+  // This week's fast as the cards describe it: the longest fast started this week, whether the weekly goal is met,
   // and the next planned day (this week's if it's still ahead and the quest is open, otherwise next week's).
   function fastWeek(date) {
     const S = F.store.load(), fd = S.settings.fast.day;
     const ws = F.ui.weekStart(date), we = F.ui.addDays(ws, 6);
     const best = S.fasts.filter((f) => { const d = F.ui.ymd(new Date(f.start)); return d >= ws && d <= we; })
       .sort((a, b) => (b.end - b.start) - (a.end - a.start))[0] || null;
-    const met = !!best && best.end - best.start >= 24 * 3.6e6;
+    const goalH = (F.data.prog().quotas.find((q) => q.id === 'fast') || {}).minH || 24;
+    const met = !!best && best.end - best.start >= goalH * 3.6e6;
     const planned = F.ui.addDays(ws, (fd + 6) % 7);   // this week's planned day (weeks start on Monday)
     const next = met || planned < date ? F.ui.addDays(planned, 7) : planned;
     const dayOf = (f) => F.ui.fmtDate(F.ui.ymd(new Date(f.end)), { weekday: 'short' });
-    return { best, met, planned, next, passed: planned < date, dayOf, fd };
+    return { best, met, planned, next, passed: planned < date, dayOf, fd, goalH };
   }
   const nextText = (d, date) => (d === date ? 'today' : d === F.ui.addDays(date, 1) ? 'tomorrow' : F.ui.fmtDate(d, { weekday: 'short', month: 'short', day: 'numeric' }));
 
@@ -318,9 +319,9 @@
     if (!q || !q.target || q.met) return q && q.met ? h('div', { class: 'small green', text: `⏳ This week’s fast is done${W.best ? ` — ${hm((W.best.end - W.best.start) / 3.6e6)} on ${W.dayOf(W.best)}` : ''}. Next one ${nextText(W.next, date)}.` }) : null;
     const fd = W.fd;
     const isDay = F.ui.dow(date) === fd, eve = F.ui.dow(F.ui.addDays(date, 1)) === fd;
-    const msg = W.best ? `⏳ This week so far: ${hm((W.best.end - W.best.start) / 3.6e6)} on ${W.dayOf(W.best)}. A 24 h fast before Sunday completes the quest.`
+    const msg = W.best ? `⏳ This week so far: ${hm((W.best.end - W.best.start) / 3.6e6)} on ${W.dayOf(W.best)}. A fast of ${W.goalH} h or more before Sunday completes the goal.`
       : isDay ? '⏳ Fast day — not running yet. Started last night? Tap Start and pick the time.'
-      : eve ? '⏳ Fast starts tonight after dinner — through tomorrow evening.'
+      : eve ? `⏳ Fast starts tonight after dinner — ${(S.settings.fast.targetH || 24) >= 24 ? 'through tomorrow evening' : 'until about lunch tomorrow'}.`
       : W.passed ? `⏳ ${F.ui.DAYS[fd]}’s fast didn’t happen — any day before Sunday still counts.`
       : `⏳ Weekly fast · planned for ${F.ui.DAYS[fd]}`;
     return h('div', { class: 'row between nowrap' }, h('span', { class: 'small', text: msg }), h('button', { class: 'btn xs' + (isDay || eve ? ' primary' : ''), text: 'Start', onClick: () => F.fastSheet() }));
@@ -335,11 +336,11 @@
       const today = F.ui.today(), W = fastWeek(today);
       const fastLen = (f) => hm((f.end - f.start) / 3.6e6);
       const status = W.met ? h('div', { class: 'callout green small mt-s', text: `✓ This week’s fast is done — ${fastLen(W.best)} on ${W.dayOf(W.best)}. Next one ${nextText(W.next, today)}.` })
-        : W.best ? h('div', { class: 'callout small mt-s', text: `This week so far: ${fastLen(W.best)} on ${W.dayOf(W.best)} (+${F.game.fastXP((W.best.end - W.best.start) / 3.6e6)} XP). A 24 h fast before Sunday completes the weekly quest.` })
+        : W.best ? h('div', { class: 'callout small mt-s', text: `This week so far: ${fastLen(W.best)} on ${W.dayOf(W.best)} (+${F.game.fastXP((W.best.end - W.best.start) / 3.6e6)} XP). A fast of ${W.goalH} h or more before Sunday completes the weekly goal.` })
         : W.passed ? h('div', { class: 'callout small mt-s', text: `${F.ui.DAYS[W.fd]} has passed this week — a fast any day before Sunday still counts.` })
         : null;
       card.append(h('div', { class: 'eyebrow', text: '⏳ Weekly fast' }),
-        h('div', { class: 'row between' }, h('b', { text: `Target ${target} h · next ${nextText(W.next, today)}` }), F.ui.seg([{ v: 24, label: '24 h' }, { v: 36, label: '36 h' }], target, (v) => { target = v; })),
+        h('div', { class: 'row between' }, h('b', { text: `Target ${target} h · next ${nextText(W.next, today)}` }), F.ui.seg([{ v: 16, label: '16 h' }, { v: 24, label: '24 h' }, { v: 36, label: '36 h' }], target, (v) => { target = v; })),
         status,
         h('p', { class: 'small muted mt-s', text: 'Start the timer when you finish your last meal. Forgot to? “I started earlier” sets the clock back to when you stopped eating. It walks you through what your body is doing hour by hour.' }),
         h('div', { class: 'btngroup mt' },
@@ -404,7 +405,7 @@
       const hrs = (tp.get() - f.start) / 3.6e6, xp = F.game.fastXP(hrs);
       note.className = 'callout small' + (hrs <= 0 ? ' amber' : xp ? ' green' : '');
       note.replaceChildren(h('b', { text: hrs <= 0 ? 'That’s before the fast started.' : hrs >= f.targetH ? `You made it — ${hm(hrs)}.` : hrs >= 24 ? `${hm(hrs)} — past the 24-hour mark.` : `${hm(hrs)} fasted.` }),
-        hrs <= 0 ? '' : ' ' + (hrs >= 24 ? `+${xp} XP. Break it with a protein-forward, normal-sized meal.` : xp ? `+${xp} XP for the hours you did. Ending when your body says so is the right call.` : 'The first 12 hours don’t earn fast XP, but it’s logged. No harm in stopping.'));
+        hrs <= 0 ? '' : ' ' + (hrs >= 24 || hrs >= f.targetH ? `+${xp} XP. Break it with a protein-forward, normal-sized meal.` : xp ? `+${xp} XP for the hours you did. Ending when your body says so is the right call.` : 'The first 12 hours don’t earn fast XP, but it’s logged. No harm in stopping.'));
     };
     const tp = timePicker(Date.now(), [{ t: Date.now(), label: 'Just now' }], paint);
     const sh = sheet(h('div', { class: 'stack' },
@@ -450,7 +451,7 @@
       h('button', { class: 'btn primary block', text: 'Log it', onClick: () => {
         const r = read(), bad = problem(r);
         if (bad) { toast(bad, 2600); return; }
-        F.store.addFast(r.a, r.b, r.hrs >= 36 ? 36 : 24);
+        F.store.addFast(r.a, r.b, r.hrs >= 36 ? 36 : r.hrs >= 24 ? 24 : 16);
         sh.close();
         F.timer.sfx('done');
         F.ui.xpFloat(F.game.fastXP(r.hrs), '🍗');

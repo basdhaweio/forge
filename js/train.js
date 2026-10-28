@@ -66,10 +66,12 @@
 
   // What to offer first: what you've logged lately, then the strength staples as they'd be built for that day
   // (so they fit the equipment, the phase and the knee/back check-in).
-  F.quickPicks = (date = F.ui.today(), { exclude } = {}) => {
+  F.quickPicks = (date = F.ui.today(), { exclude, cats } = {}) => {
     const S = F.store.load(), c = F.data.ctx(date), out = [], seen = new Set(exclude || []);
-    const add = (id) => { if (!id || out.length >= 12 || seen.has(id)) return; seen.add(id); const e = F.data.ex(id); if (quickable(e, c)) out.push(e); };
-    for (let i = S.sessions.length - 1; i >= 0 && out.length < 6; i--) for (const en of S.sessions[i].entries || []) if (!en.kind) add(en.ex);
+    const fits = (e) => quickable(e, c) && (!cats || cats.includes(e.cat));
+    const add = (id) => { if (!id || out.length >= 12 || seen.has(id)) return; seen.add(id); const e = F.data.ex(id); if (fits(e)) out.push(e); };
+    for (let i = S.sessions.length - 1; i >= 0 && out.length < 6; i--) for (const en of S.sessions[i].entries || []) if (cats || !en.kind) add(en.ex);
+    if (cats && cats.includes('pt')) for (const x of S.settings.ptRoutine || F.data.prog().ptDefault) add(x.ex);   // your PT routine first
     for (const id of ['strA', 'strB', 'strC']) {
       let plan;
       try { plan = F.data.buildPlan(id, date); } catch (e) { continue; }
@@ -78,18 +80,23 @@
     return out;
   };
 
-  F.exercisePicker = ({ date = F.ui.today(), title = 'Pick an exercise', onPick } = {}) => {
+  // `whole` ({ icon, label, sub, run }) puts a full session above the single exercises.
+  F.exercisePicker = ({ date = F.ui.today(), title = 'Pick an exercise', cats, whole, onPick } = {}) => {
     const c = F.data.ctx(date);
-    const picks = F.quickPicks(date);
-    const all = F.data.exercises().filter((e) => quickable(e, c));
+    const picks = F.quickPicks(date, { cats });
+    const all = F.data.exercises().filter((e) => quickable(e, c) && (!cats || cats.includes(e.cat)));
     const input = h('input', { type: 'search', placeholder: 'Search exercises', autocomplete: 'off' });
     const list = h('div', { class: 'list mt' });
     const row = (e) => h('div', { class: 'item', onClick: () => { sh.close(); onPick(e); } },
       h('span', { class: 'emo', text: F.data.stat(e.stat).icon }), h('div', { class: 't' }, h('b', { text: e.name }), h('small', { text: e.cues[0] || '' })), F.flagsRow(e));
+    const top = whole ? h('div', { class: 'item', onClick: () => { sh.close(); whole.run(); } },
+      h('span', { class: 'emo', text: whole.icon }), h('div', { class: 't' }, h('b', { text: whole.label }), h('small', { text: whole.sub })), icon('play', 16)) : null;
     const draw = () => {
       const q = input.value.trim().toLowerCase();
       list.innerHTML = '';
-      if (!q) list.append(h('div', { class: 'eyebrow', text: 'Suggested' }), picks.map(row), h('div', { class: 'eyebrow mt', text: 'Everything that fits today' }));
+      if (!q && top) list.append(top);
+      if (!q && picks.length) list.append(h('div', { class: 'eyebrow' + (top ? ' mt' : ''), text: 'Recent and familiar' }), picks.map(row), h('div', { class: 'eyebrow mt', text: 'Everything that fits today' }));
+      else if (!q && top) list.append(h('div', { class: 'eyebrow mt', text: 'Or one exercise' }));
       const hits = q ? all.filter((e) => e.name.toLowerCase().includes(q) || (e.tags || []).some((t) => t.includes(q))) : all.filter((e) => !picks.includes(e));
       list.append(hits.map(row));
       if (q && !hits.length) list.append(h('div', { class: 'small muted', text: 'Nothing that fits today matches that.' }));
@@ -204,17 +211,7 @@
   function sessionsTab() {
     const S = F.store.load(), P = F.data.prog();
     const out = h('div');
-    const sched = S.settings.schedule || P.schedule;
-    const week = h('div', { class: 'card' }, h('div', { class: 'row between' }, h('div', { class: 'eyebrow', text: 'Your week' }), h('a', { class: 'btn xs ghost', href: '#/settings/program', text: 'Edit' })));
-    const todayDow = F.ui.dow(F.ui.today());
-    for (const d of [1, 2, 3, 4, 5, 6, 0]) {
-      const names = (sched[String(d)] || []).map((id) => (F.data.session(id) || {}).name).filter(Boolean);
-      week.append(h('div', { class: 'row nowrap small', style: { padding: '5px 0', fontWeight: d === todayDow ? 700 : 400 } },
-        h('span', { style: { width: '44px' }, class: d === todayDow ? 'accent' : 'muted', text: F.ui.DAYS[d].slice(0, 3) }),
-        h('span', { class: 'grow', text: names.join(' + ') || 'Rest' }),
-        d === S.settings.fast.day ? pill('fast day', 'purple') : null));
-    }
-    out.append(week);
+    out.append(h('p', { class: 'small muted', text: 'Whole sessions, for when you want one. Nothing here is scheduled — your weekly goals on Today count anything you do, even a single exercise.' }));
     const groups = {};
     for (const s of F.data.sessions()) (groups[s.group] || (groups[s.group] = [])).push(s);
     for (const [g, list] of Object.entries(groups)) {
@@ -340,9 +337,12 @@
       h('h1', { text: 'Training plan' + (S.profile.name ? ' — ' + S.profile.name : '') }),
       h('p', { class: 'muted', text: `${F.ui.fmtDate(today, { month: 'long', day: 'numeric', year: 'numeric' })} · Phase ${S.settings.phase} (${P.phases[S.settings.phase - 1].name}) · equipment: ${F.data.loc(loc).label.toLowerCase()}` }),
       h('p', { class: 'small', text: 'Programmed around: ' + ([inj.knee ? 'knees (meniscus/cartilage)' : '', inj.lumbar ? 'lower back (disc)' : '', inj.shoulder ? 'shoulder' : ''].filter(Boolean).join(', ') || 'no injuries flagged') + '. Flags show exercises marked caution for those; anything marked avoid is never programmed. Every exercise can be swapped.' }));
-    const sched = S.settings.schedule || P.schedule;
-    const week = h('table', { class: 'table mt' }, h('tbody', null, [1, 2, 3, 4, 5, 6, 0].map((d) => h('tr', null, h('td', { text: F.ui.DAYS[d] }), h('td', { text: (sched[String(d)] || []).map((id) => (F.data.session(id) || {}).name).filter(Boolean).join(' + ') || 'Rest' })))));
-    wrap.append(h('h2', { class: 'mt', text: 'Week' }), week, h('p', { class: 'small muted', text: 'Daily: PT routine, two isometric holds, 10 min rolling/stretching, a walk. Weekly: one 24–36 h fast.' }));
+    const goals = P.quotas.map((q) => ({ q, n: ((S.settings.quotas || {})[q.id] || {}).home ?? q.home })).filter((x) => x.n > 0);
+    const week = h('table', { class: 'table mt' }, h('tbody', null, goals.map(({ q, n }) => h('tr', null, h('td', { text: q.icon + ' ' + q.label }),
+      h('td', { text: q.kind === 'sugar' ? `at most ${F.ui.num(F.game.treatBudget(), 1)} treats` : n + '× a week' })))));
+    wrap.append(h('h2', { class: 'mt', text: 'Weekly goals' }), week, h('p', { class: 'small muted', text: 'Nothing is scheduled: any single exercise of the kind counts toward a goal, and a goal hit three weeks running offers to go up by one. Daily: ' + F.game.dailyTasksOn(today).map((t) => t.label).join(', ') + '.' }));
+    // every session the program can offer, from its default week
+    const sched = P.schedule;
     const ids = ['pt', 'holds'].concat([...new Set([1, 2, 3, 4, 5, 6, 0].flatMap((d) => sched[String(d)] || []))], ['gymA', 'gymB']);
     for (const id of ids) {
       let plan;
@@ -365,7 +365,7 @@
       h('li', { text: 'No loaded spinal flexion (crunches, sit-ups, twists); neutral-spine hinges from an elevated start; chest-supported rows; McGill Big 3 core.' }),
       h('li', { text: 'Progression: reps to the top of the range, then +5 lb (upper) / +10 lb (lower). Holds: best + 5 s.' }),
       h('li', { text: 'Barbell lifts unlock in phases only after the user confirms PT/doctor clearance.' }),
-      h('li', { text: 'Daily check-in: a “flared” knee or back swaps the day to a recovery session and filters out anything not marked fine for that joint.' }),
+      h('li', { text: 'Daily check-in: a “flared” knee or back filters out anything not marked fine for that joint for the day, and offers a recovery session instead.' }),
       P.safety.pain.map((x) => h('li', { text: `Pain ${x.level}: ${x.text}` }))));
     return wrap;
   };

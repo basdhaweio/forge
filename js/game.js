@@ -17,7 +17,8 @@ F.game = (() => {
   const kcal = (met, min) => Math.round((met || 4) * weightLb() * LB2KG * (min || 0) / 60);
   function age() { const y = F.store.load().profile.birthYear; return y ? new Date().getFullYear() - y : null; }
   function hrMax() { const S = F.store.load(); if (S.profile.hrMax) return S.profile.hrMax; const a = age(); return a ? Math.round(208 - 0.7 * a) : null; }
-  function proteinTarget() { const S = F.store.load(); return S.settings.nutrition.protein || Math.round((weightLb() * 0.8) / 5) * 5; }
+  // 0.6 g per lb while training is light (John, 2026-10-28); set it in Settings when lifting picks up.
+  function proteinTarget() { const S = F.store.load(); return S.settings.nutrition.protein || Math.round((weightLb() * 0.6) / 5) * 5; }
   // Treats are counted, not weighed: small ½, regular 1, big 2. Older logs carried sugar grams; map those to a size.
   function treatBudget() { const n = F.store.load().settings.nutrition; return n.treatsWeek ?? 5; }
   // Water: half your bodyweight in ounces is the usual starting point, kept between 64 and 120 oz. Stored in fl oz.
@@ -137,7 +138,8 @@ F.game = (() => {
     if (S.activeFast) cover(S.activeFast.start, Math.max(Date.now(), S.activeFast.start + S.activeFast.targetH * 3.6e6));
     return ms >= 12 * 3.6e6;
   }
-  const dailyTasksOn = (date) => { const fast = fastDay(date); return F.data.prog().dailyTasks.filter((t) => !(fast && t.fastOff)); };
+  // A retired quest ("until") still counts for the days it was on, so history and XP don't change.
+  const dailyTasksOn = (date) => { const fast = fastDay(date); return F.data.prog().dailyTasks.filter((t) => !(t.until && date > t.until) && !(fast && t.fastOff)); };
 
   // ---------- daily tasks ----------
   function tasksDoneFor(date, d, S, proteinT, walkT, waterT) {
@@ -146,7 +148,7 @@ F.game = (() => {
     for (const t of dailyTasksOn(date)) {
       if (t.kind === 'checkin') { if (S.days[date] && S.days[date].checkin) out.add(t.id); }
       else if (!d) continue;
-      else if (t.kind === 'session') { if (t.tags.some((g) => d.tags.has(g)) || (cover[t.id] && d.tags.has('formalpt'))) out.add(t.id); }
+      else if (t.kind === 'session') { if (t.tags.some((g) => d.tags.has(g)) || (t.cats || []).some((c) => d.cats.has(c)) || (cover[t.id] && d.tags.has('formalpt'))) out.add(t.id); }
       else if (t.kind === 'walk') { if (d.walkMin >= walkT) out.add(t.id); }
       else if (t.kind === 'protein') { if (d.protein >= proteinT) out.add(t.id); }
       else if (t.kind === 'food') { if (d.foodN > 0) out.add(t.id); }
@@ -155,7 +157,17 @@ F.game = (() => {
     return out;
   }
 
-  // ---------- weekly quests ----------
+  // ---------- weekly goals ----------
+  // A target change applies from a given week on and keeps the version before it, so past weeks keep the target they
+  // had: settings.quotas[id] = { home, travel, since: a Monday, prev: the version before }. No `since` = every week.
+  const quotaVer = (S, id, ws) => { let o = (S.settings.quotas || {})[id]; while (o && o.since && ws < o.since) o = o.prev; return o || null; };
+  const quotaAt = (S, id, ws) => quotaVer(S, id, ws) || {};
+  function setQuota(id, vals, from = F.ui.weekStart(F.ui.today())) {
+    const S = F.store.load(), all = S.settings.quotas || (S.settings.quotas = {});
+    const head = all[id] || {}, prev = quotaVer(S, id, F.ui.addDays(from, -7));
+    all[id] = Object.assign({ home: head.home, travel: head.travel }, vals, { since: from }, prev ? { prev } : {});
+    F.store.save();
+  }
   function weekQuotas(ws, days, S) {
     const P = F.data.prog(), today = F.ui.today();
     const dates = Array.from({ length: 7 }, (_, i) => F.ui.addDays(ws, i));
@@ -168,23 +180,27 @@ F.game = (() => {
     const elapsed = dates.filter((d) => d <= today).length;
     const list = [];
     for (const q of P.quotas) {
-      const o = (S.settings.quotas || {})[q.id] || {};
+      const o = quotaAt(S, q.id, ws);
       const home = o.home ?? q.home, trav = o.travel ?? q.travel;
       let target = Math.round(home * homeFrac + trav * (1 - homeFrac));
-      if (q.kind === 'protein') target = Math.max(0, target - fastDays);   // no protein target on a fast day
+      if (q.kind === 'protein') target = Math.min(target, Math.max(0, 7 - fastDays));   // fast days can't be protein days
       let done = 0, extra = null;
       const tagged = (tag) => sess.filter((x) => (x.tags || []).includes(tag));
       if (q.kind === 'count') done = tagged(q.tag).filter((x) => !q.minMin || (x.minutes || 0) >= q.minMin).length;
-      else if (q.kind === 'days') done = new Set(tagged(q.tag).map((x) => x.date)).size;
+      // days with anything of that kind: a session with the tag, or any exercise from the categories (quick sets too)
+      else if (q.kind === 'days') {
+        const tags = q.tags || (q.tag ? [q.tag] : []), cats = q.cats || [];
+        done = dates.filter((d) => days[d] && (tags.some((g) => days[d].tags.has(g)) || cats.some((c) => days[d].cats && days[d].cats.has(c)))).length;
+      }
       else if (q.kind === 'minutes') done = tagged(q.tag).reduce((a, x) => a + (x.minutes || 0), 0);
       else if (q.kind === 'holdMin') done = Math.floor(dates.reduce((a, d) => a + ((days[d] && days[d].holdSec) || 0), 0) / 60);
       else if (q.kind === 'protein') done = dates.filter((d) => days[d] && days[d].protein >= proteinT).length;
       // a fast belongs to the week it started in, so a Saturday-night-to-Monday 36 h fast still counts
-      else if (q.kind === 'fast') done = S.fasts.filter((f) => { const b = F.ui.ymd(new Date(f.start)); return b >= ws && b <= end && f.end - f.start >= 24 * 3.6e6; }).length;
+      else if (q.kind === 'fast') done = S.fasts.filter((f) => { const b = F.ui.ymd(new Date(f.start)); return b >= ws && b <= end && f.end - f.start >= (q.minH || 24) * 3.6e6; }).length;
       else if (q.kind === 'sugar') {
         const used = dates.reduce((a, d) => a + ((days[d] && days[d].treats) || 0), 0);
         const foodDays = dates.filter((d) => days[d] && days[d].foodN > 0).length;
-        const enough = foodDays >= Math.min(4, Math.max(1, elapsed));
+        const enough = foodDays >= 1;   // something logged that week, so an empty log doesn't pass
         extra = { used, budget, foodDays };
         done = used <= budget && enough ? 1 : 0;
       }
@@ -193,6 +209,36 @@ F.game = (() => {
     const act = list.filter((q) => q.target > 0);
     return { ws, end, list, travelDays, fastDays, perfect: act.length > 0 && act.every((q) => q.met), realSessions: sess.filter((x) => !x.auto).length, closed: end < today };
   }
+
+  // ---------- ramping a goal up ----------
+  // A goal met three weeks running earns an offer to go up by one. Only weeks since the goals were reset (or that goal
+  // was last raised) count, and "Not yet" holds the offer back three weeks. One offer a week at most: after a raise or
+  // a "Not yet", any other goal waits for next week.
+  function rampOffer() {
+    const S = F.store.load(), C = compute(), today = F.ui.today(), thisWS = F.ui.weekStart(today);
+    const snooze = S.settings.rampSnooze || {}, from = S.settings.rampFrom || {};
+    if (Object.values(from).some((d) => d > thisWS) || Object.values(snooze).some((d) => d >= thisWS)) return null;
+    for (const q of F.data.prog().quotas) {
+      if (q.kind === 'sugar') continue;
+      const now = C.thisWeek && C.thisWeek.list.find((x) => x.id === q.id);
+      if (!now || !now.target) continue;
+      if (snooze[q.id] && F.ui.daysBetween(snooze[q.id], today) < 21) continue;
+      const start = [S.settings.goalsSince || '', from[q.id] || ''].sort().pop();
+      const weeks = [1, 2, 3].map((k) => F.ui.addDays(thisWS, -7 * k));
+      if (weeks.some((ws) => ws < start)) continue;
+      if (weeks.every((ws) => { const W = C.weeks[ws], x = W && W.list.find((y) => y.id === q.id); return x && x.target && x.met; })) return { id: q.id, label: q.label, icon: q.icon, target: quotaAt(S, q.id, thisWS).home ?? q.home };
+    }
+    return null;
+  }
+  // Up by one from next Monday: this week, and the weeks that earned it, stay as they were.
+  function raiseGoal(id) {
+    const S = F.store.load(), q = F.data.prog().quotas.find((x) => x.id === id);
+    if (!q) return;
+    const thisWS = F.ui.weekStart(F.ui.today()), from = F.ui.addDays(thisWS, 7);
+    (S.settings.rampFrom || (S.settings.rampFrom = {}))[id] = from;
+    setQuota(id, { home: (quotaAt(S, id, thisWS).home ?? q.home) + 1 }, from);
+  }
+  function snoozeRamp(id) { const S = F.store.load(); (S.settings.rampSnooze || (S.settings.rampSnooze = {}))[id] = F.ui.today(); F.store.save(); }
 
   // ---------- the big derivation ----------
   let cache = null, cacheRev = -1, cacheDay = '';
@@ -204,7 +250,7 @@ F.game = (() => {
     const src = { sessions: 0, tasks: 0, weeks: 0, fasts: 0, measures: 0, ach: 0, quests: 0 };
     let total = 0;
     const days = {};
-    const D = (d) => days[d] || (days[d] = { xp: 0, active: false, min: 0, kcal: 0, tags: new Set(), holdSec: 0, walkMin: 0, protein: 0, treats: 0, kcalIn: 0, foodN: 0, water: 0, sessions: 0 });
+    const D = (d) => days[d] || (days[d] = { xp: 0, active: false, min: 0, kcal: 0, tags: new Set(), cats: new Set(), holdSec: 0, walkMin: 0, protein: 0, treats: 0, kcalIn: 0, foodN: 0, water: 0, sessions: 0 });
     const give = (d, xp, stat, kind) => {
       if (!xp) return;
       total += xp; src[kind] += xp;
@@ -238,8 +284,9 @@ F.game = (() => {
         if (s.act) T.distBest[s.act] = Math.max(T.distBest[s.act] || 0, s.dist);
       }
       for (const en of s.entries || []) {
-        if (en.kind) continue; // list/flow/circuit entries aren't graded sets
         const e = F.data.ex(en.ex);
+        if (e && (en.sets || []).some((z) => z.done)) d.cats.add(e.cat);
+        if (en.kind) continue; // list/flow/circuit entries aren't graded sets
         if (!e) continue;
         for (const z of en.sets || []) {
           if (!z.done) continue;
@@ -292,7 +339,7 @@ F.game = (() => {
       const done = tasksDoneFor(date, days[date], S, proteinT, walkT, waterT);
       D(date).tasks = done;
       for (const t of P.dailyTasks) if (done.has(t.id)) give(date, t.xp, t.stat, 'tasks');
-      if (done.has('protein')) proteinDays++;
+      if (days[date] && days[date].protein >= proteinT) proteinDays++;
       if (done.has('water')) waterDays++;
     }
 
@@ -463,11 +510,11 @@ F.game = (() => {
     for (const [ws, W] of Object.entries(C.weeks)) {
       for (const q of W.list) if (q.met && (q.kind !== 'sugar' || W.closed) && !seen.q[ws + ':' + q.id]) {
         seen.q[ws + ':' + q.id] = 1; dirty = true;
-        F.ui.toast(`${q.icon} Weekly quest done: ${q.label}  +${P.quotaXP} XP`, 2800);
+        F.ui.toast(`${q.icon} Weekly goal done: ${q.label}  +${P.quotaXP} XP`, 2800);
       }
       if (W.closed && W.perfect && !seen.weeks[ws]) {
         seen.weeks[ws] = today; dirty = true;
-        F.ui.celebrate({ icon: '🌟', eyebrow: 'Week of ' + F.ui.fmtDate(ws, { month: 'short', day: 'numeric' }), title: 'Perfect week', sub: 'Every weekly quest done.', xp: P.perfectXP });
+        F.ui.celebrate({ icon: '🌟', eyebrow: 'Week of ' + F.ui.fmtDate(ws, { month: 'short', day: 'numeric' }), title: 'Perfect week', sub: 'Every weekly goal done.', xp: P.perfectXP });
       }
     }
     for (const st of Object.values(C.stats)) if ((seen.stats[st.id] || 1) < st.level) {
@@ -478,6 +525,6 @@ F.game = (() => {
     if (F.app) F.app.chrome();
   }
 
-  return { compute, afterChange, sessionXP, detectPRs, prText, weekQuotas, metricText, levelInfo, statInfo, titleFor,
+  return { compute, afterChange, rampOffer, raiseGoal, snoozeRamp, quotaAt, setQuota, sessionXP, detectPRs, prText, weekQuotas, metricText, levelInfo, statInfo, titleFor,
     fastDay, dailyTasksOn, weightLb, kcal, age, hrMax, proteinTarget, treatBudget, waterTarget, waterAuto, waterMet, tpOf, bmr, suggestKcal, e1rm, fastXP, COOKIE_KCAL, QSTAT };
 })();

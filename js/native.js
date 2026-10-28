@@ -10,16 +10,14 @@ F.native = (() => {
   function summary() {
     const S = F.store.load(), C = F.game.compute(), today = F.ui.today();
     const d = C.days[today] || {}, done = d.tasks || new Set(), tasks = F.game.dailyTasksOn(today);
-    const logged = new Set(F.store.sessionsOn(today).filter((x) => !x.auto).flatMap((x) => [x.src, x.tpl]));
-    const sched = F.data.scheduled(today).map((r) => (r.flare ? r.flare.tpl : r.tpl));
-    const next = sched.find((t) => !logged.has(t.id));
+    const week = (C.thisWeek ? C.thisWeek.list : []).filter((q) => q.target);
     const water = d.water || 0, waterT = F.game.waterTarget(), unit = F.u.vu();
     return {
       v: 1, date: today, at: Date.now(),
       streak: C.streak.current, freezes: C.streak.freezes, activeToday: C.streak.activeToday,
       level: C.level.level, title: C.level.title, pct: Math.round(C.level.pct * 1000) / 1000,
       quests: { done: tasks.filter((t) => done.has(t.id)).length, total: tasks.length },
-      mission: next ? next.name : sched.length ? 'mission done ✓' : 'rest day',
+      mission: `${week.filter((q) => q.met).length}/${week.length} weekly goals`,
       protein: { g: Math.round(d.protein || 0), target: F.game.proteinTarget(), off: F.game.fastDay(today) },
       water: { text: `${F.u.volN(water)} / ${F.u.volN(waterT)} ${unit}`, empty: `0 / ${F.u.volN(waterT)} ${unit}`, pct: waterT ? Math.min(1, water / waterT) : 0, cup: '+' + F.u.vol(F.waterCup()) },
       fast: S.activeFast ? { start: S.activeFast.start, targetH: S.activeFast.targetH } : null,

@@ -219,7 +219,7 @@ F.data = (() => {
     return 0;
   }
 
-  // ---------- today's schedule ----------
+  // ---------- a session for a day: the run gate, a missing machine, a flare-up ----------
   function reqOk(tpl, c) { return !tpl.requires || tpl.requires.every((req) => req.split('|').some((a) => c.kit.has(a))); }
   function resolveSession(id, c) {
     let tpl = st.sess[id];
@@ -233,27 +233,14 @@ F.data = (() => {
     else if (c.back >= 2 && fl.back) flare = { id: fl.back, why: 'Back flared' };
     return { id: tpl.id, tpl, notes, flare: flare ? Object.assign(flare, { tpl: st.sess[flare.id] }) : null, original: id };
   }
-  function scheduled(date = F.ui.today()) {
-    const S = F.store.load();
-    const sched = S.settings.schedule || st.prog.schedule;
-    let ids = (sched[String(F.ui.dow(date))] || []).slice();
-    const bm = st.prog.benchmark;
-    if (bm && F.ui.parse(date).getDate() <= 7) ids = ids.map((x) => (x === bm.replace ? bm.with : x));
-    const c = ctx(date);
-    // Gym day: the strength session becomes the next gym session (A/B, whichever was done longer ago before this day).
-    // Once one is logged on the day, that's the day's gym session — it shows as done instead of offering the other.
-    if (c.loc === 'gym') {
-      const gym = (x) => x.tpl === 'gymA' || x.tpl === 'gymB';
-      const onDay = S.sessions.find((x) => x.date === date && gym(x));
-      const lastDone = (tid) => { const ss = S.sessions; for (let i = ss.length - 1; i >= 0; i--) if (ss[i].tpl === tid && ss[i].date < date) return ss[i].date; return ''; };
-      const next = onDay ? onDay.tpl : lastDone('gymA') <= lastDone('gymB') ? 'gymA' : 'gymB';
-      let swapped = false;
-      ids = ids.map((x) => { const t = st.sess[x]; if (!swapped && t && (t.tags || []).includes('lift')) { swapped = true; return next; } return x; });
-      if (!swapped) ids.unshift(next);
-    }
-    return ids.map((x) => resolveSession(x, c)).filter(Boolean);
+  // Gym day: the next gym session is A or B, whichever was done longer ago before this day; null once one is logged that day.
+  function nextGym(date) {
+    const ss = F.store.load().sessions;
+    if (ss.some((x) => x.date === date && (x.tpl === 'gymA' || x.tpl === 'gymB'))) return null;
+    const lastDone = (tid) => { for (let i = ss.length - 1; i >= 0; i--) if (ss[i].tpl === tid && ss[i].date < date) return ss[i].date; return ''; };
+    return lastDone('gymA') <= lastDone('gymB') ? 'gymA' : 'gymB';
   }
 
   return { load, ex, exercises, prog, session, sessions, stat, loc, equipLabel, kit, hasEquip, missingEquip, ctx, blocked, allowed, resolveSlot,
-    lastEntry, lastSummary, targetFor, templateFor, buildPlan, scheduled, resolveSession, reqOk };
+    lastEntry, lastSummary, targetFor, templateFor, buildPlan, nextGym, resolveSession, reqOk };
 })();

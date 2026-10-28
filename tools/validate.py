@@ -146,6 +146,16 @@ for it in prog["ptDefault"]:
 for t in prog["dailyTasks"]:
     if t.get("session") and t["session"] not in SESS:
         err(f"dailyTask {t['id']}: unknown session")
+    for c in t.get("cats", []):
+        if c not in CATS:
+            err(f"dailyTask {t['id']}: unknown category {c}")
+for q in prog["quotas"]:
+    for k in ("session", "whole"):
+        if q.get(k) and q[k] not in SESS:
+            err(f"quota {q['id']}: unknown {k} {q[k]}")
+    for c in q.get("cats", []):
+        if c not in CATS:
+            err(f"quota {q['id']}: unknown category {c}")
 for a in prog["achievements"]:
     if not METRIC.match(a["metric"]):
         err(f"achievement {a['id']}: unknown metric '{a['metric']}'")

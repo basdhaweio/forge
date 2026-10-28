@@ -122,7 +122,7 @@
 
     // XP sources
     const src = C.src;
-    const bits = [['Sessions', src.sessions], ['Daily quests', src.tasks], ['Weekly quests', src.weeks], ['Fasts', src.fasts], ['Measurements', src.measures], ['Achievements', src.ach], ['Epic quests', src.quests]].filter((x) => x[1]);
+    const bits = [['Sessions', src.sessions], ['Daily quests', src.tasks], ['Weekly goals', src.weeks], ['Fasts', src.fasts], ['Measurements', src.measures], ['Achievements', src.ach], ['Epic quests', src.quests]].filter((x) => x[1]);
     wrap.append(h('details', { class: 'acc mt' }, h('summary', { text: 'Where your XP comes from' }), h('div', { class: 'acc-body' }, bits.map(([l, v]) => h('div', { class: 'row between small', style: { padding: '3px 0' } }, h('span', { text: l }), h('b', { text: num(v) })))),
       h('div', { class: 'acc-body tiny muted', text: 'Sessions earn XP from minutes × intensity, sets and PRs. Level n needs 100 × (n−1)² total XP, so early levels come fast and later ones take real consistency.' })));
     return wrap;

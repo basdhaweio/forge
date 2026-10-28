@@ -99,7 +99,7 @@
         nav(() => go(2)));
     } else if (step === 2) {
       wrap.append(h('h1', { text: 'What are we working around?' }), h('p', { class: 'muted mb', text: 'Every exercise is flagged for knees, back and shoulders. Tick what applies and the plan filters itself — you can still swap anything, and your PT has the final word.' }),
-        injuryCards(), h('p', { class: 'small muted mt', text: 'Each morning you’ll check in on how they feel. A flare-up swaps the day to a recovery session with full streak credit.' }), nav(() => go(3)));
+        injuryCards(), h('p', { class: 'small muted mt', text: 'Each morning you’ll check in on how they feel. A flare-up filters out anything that loads the joint and offers a recovery session, with full streak credit.' }), nav(() => go(3)));
     } else if (step === 3) {
       wrap.append(h('h1', { text: 'Priorities' }), h('p', { class: 'muted mb', text: 'Priority areas get an extra set wherever they show up — more volume where you most want to see change.' }),
         h('div', { class: 'card' }, focusChips()), nav(() => go(4)));
@@ -123,8 +123,8 @@
             numField('Protein target (g/day)', n.protein, (v) => { n.protein = v; save(); }, { placeholder: String(F.game.proteinTarget()) + ' (auto)', step: 5 }),
             numField('Treats per week', n.treatsWeek, (v) => { n.treatsWeek = v === null ? 5 : Math.max(0, v); save(); }, { step: 0.5 })),
           h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Weekly fast day' }), h('select', { onChange: (e) => { st.settings.fast.day = +e.target.value; save(); } }, F.ui.DAYS.map((d, i) => h('option', { value: i, selected: st.settings.fast.day === i, text: d })))),
-          h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Fast length' }), seg([{ v: 24, label: '24 h' }, { v: 36, label: '36 h' }], st.settings.fast.targetH, (v) => { st.settings.fast.targetH = v; save(); }))),
-        h('p', { class: 'small muted mt', text: 'Auto protein is 0.8 g per lb of bodyweight — a solid target for building muscle while leaning out. A treat is a cookie, brownie, muffin or soda; small ones count half, a slice of cake or a big bakery cookie counts double. Fruit and milk don’t count. No weighing, no sugar grams.' }),
+          h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Fast length' }), seg([{ v: 16, label: '16 h' }, { v: 24, label: '24 h' }, { v: 36, label: '36 h' }], st.settings.fast.targetH, (v) => { st.settings.fast.targetH = v; save(); }))),
+        h('p', { class: 'small muted mt', text: 'Auto protein is 0.6 g per lb of bodyweight — enough while training is light; set your own when lifting picks up. A treat is a cookie, brownie, muffin or soda; small ones count half, a slice of cake or a big bakery cookie counts double. Fruit and milk don’t count. No weighing, no sugar grams.' }),
         h('div', { class: 'tiny muted mt-s', text: F.data.prog().fastingCaution }),
         nav(() => { st.profile.onboarded = true; if (!st.equipment) st.equipment = JSON.parse(JSON.stringify(P.kits)); F.store.saveNow(); location.hash = '#/'; setTimeout(() => F.ui.celebrate({ icon: '⚒️', eyebrow: 'Character created', title: 'Level 1 · Recruit', sub: 'Check in, knock out your PT, and the numbers start going up.' }), 300); }, 'Start training'));
     }
@@ -162,28 +162,15 @@
       s.phase = v; save(); drawPhase();
     }), h('div', { class: 'small muted mt-s', text: P.phases[s.phase - 1].desc })); };
     drawPhase();
-    const sched = s.schedule || JSON.parse(JSON.stringify(P.schedule));
-    const opts = F.data.sessions().filter((x) => !x.dynamic && x.group !== 'Recovery');
-    const selFor = (d, k) => {
-      const cur = (sched[String(d)] || [])[k] || '';
-      const sel = h('select', { style: { width: '100%' } }, h('option', { value: '', text: k ? '—' : 'Rest' }), opts.map((o) => h('option', { value: o.id, selected: o.id === cur, text: o.name })));
-      sel.addEventListener('change', () => { const arr = (sched[String(d)] || []).slice(); arr[k] = sel.value; s.schedule = sched; sched[String(d)] = arr.filter(Boolean); save(); });
-      return sel;
-    };
-    const schedBox = h('div', null, [1, 2, 3, 4, 5, 6, 0].map((d) => h('div', { class: 'row nowrap', style: { padding: '4px 0' } }, h('span', { class: 'small', style: { width: '40px' }, text: F.ui.DAYS[d].slice(0, 3) }), h('div', { class: 'grow' }, selFor(d, 0)), h('div', { class: 'grow' }, selFor(d, 1)))));
-    const qBox = h('table', { class: 'table' }, h('thead', null, h('tr', null, h('th', { text: 'Weekly quest' }), h('th', { text: 'Home' }), h('th', { text: 'Travel' }))), h('tbody', null, P.quotas.map((q) => {
+    const qBox = h('table', { class: 'table' }, h('thead', null, h('tr', null, h('th', { text: 'Weekly goal' }), h('th', { text: 'Home' }), h('th', { text: 'Travel' }))), h('tbody', null, P.quotas.map((q) => {
       const o = s.quotas[q.id] || {};
-      const set = (k) => (v) => { s.quotas[q.id] = Object.assign({}, s.quotas[q.id] || {}, { [k]: v === null ? undefined : v }); save(); };
+      const set = (k) => (v) => F.game.setQuota(q.id, { [k]: v === null ? undefined : v });   // from this week on
       return h('tr', null, h('td', { text: q.icon + ' ' + q.label }), h('td', null, F.ui.numIn(o.home ?? q.home, { w: '70px', step: 1, onInput: set('home') })), h('td', null, F.ui.numIn(o.travel ?? q.travel, { w: '70px', step: 1, onInput: set('travel') })));
     })));
     wrap.append(sec('program', 'Program',
       h('a', { class: 'btn sm mb', href: '#/plan' }, '🩺 Printable plan for your PT'),
       h('div', { class: 'eyebrow', text: 'Phase' }), phaseBox,
-      h('div', { class: 'eyebrow mt', text: 'Weekly schedule (a suggestion — quests count whatever you do)' }), schedBox,
-      h('button', { class: 'btn xs ghost mt-s', text: 'Reset schedule', onClick: () => { s.schedule = null; save(); F.app.render(); } }),
-      h('div', { class: 'fieldrow mt' },
-        numField('Daily walk target (min)', s.walkMin, (v) => { s.walkMin = v || 30; save(); }, { step: 5 })),
-      h('details', { class: 'acc mt' }, h('summary', { text: 'Weekly quest targets' }), h('div', { class: 'acc-body', style: { overflowX: 'auto' } }, qBox, h('div', { class: 'tiny muted mt-s', text: 'Travel weeks blend the two by days away. Set a target to 0 to drop it.' }))),
+      h('details', { class: 'acc mt' }, h('summary', { text: 'Weekly goals' }), h('div', { class: 'acc-body', style: { overflowX: 'auto' } }, qBox, h('div', { class: 'tiny muted mt-s', text: 'Times a week. Travel weeks blend the two by days away. Set one to 0 to drop it. A change counts from this week; earlier weeks keep their targets. A goal hit three weeks running offers to go up by one on Today.' }))),
       h('details', { class: 'acc mt' }, h('summary', { text: 'PT routine' }), h('div', { class: 'acc-body' }, ptEditor())),
       h('div', { class: 'mt' }, (() => { const cb = h('input', { type: 'checkbox', checked: s.sound }); cb.addEventListener('change', () => { s.sound = cb.checked; save(); }); return h('label', { class: 'toggle' }, cb, 'Timer sounds'); })(),
         (() => { const cb = h('input', { type: 'checkbox', checked: s.vibrate }); cb.addEventListener('change', () => { s.vibrate = cb.checked; save(); }); return h('label', { class: 'toggle' }, cb, 'Vibration'); })())));
@@ -220,7 +207,7 @@
       h('p', { class: 'tiny muted', text: 'Suggested calories = estimated maintenance minus 300 — a gentle deficit that trims the waist while you build. Protein matters more than hitting a calorie number exactly. Auto water is half your bodyweight in ounces.' }),
       h('div', { class: 'fieldrow mt' },
         h('label', { class: 'field' }, h('span', { text: 'Fast day' }), h('select', { onChange: (e) => { s.fast.day = +e.target.value; save(); } }, F.ui.DAYS.map((d, i) => h('option', { value: i, selected: s.fast.day === i, text: d })))),
-        h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Fast length' }), seg([{ v: 24, label: '24 h' }, { v: 36, label: '36 h' }], s.fast.targetH, (v) => { s.fast.targetH = v; save(); })))));
+        h('div', { class: 'field' }, h('span', { class: 'small muted', text: 'Fast length' }), seg([{ v: 16, label: '16 h' }, { v: 24, label: '24 h' }, { v: 36, label: '36 h' }], s.fast.targetH, (v) => { s.fast.targetH = v; save(); })))));
 
     // Goals
     const g = s.goals;

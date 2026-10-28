@@ -275,7 +275,9 @@ input.dayjump { width: auto; padding: 5px 9px; font-size: 0.83rem; border-radius
 .tick.on { background: var(--green); border-color: var(--green); color: #06291c; animation: pop 0.3s; }
 .tick.sm { width: 26px; height: 26px; }
 .wq { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 8px; }
-.wq .w { padding: 10px 11px; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border); }
+.wq .w { padding: 10px 11px; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border); text-align: left; cursor: pointer; }
+.wq button.w:hover { border-color: var(--border2); }
+.wq button.w:active { transform: scale(0.98); }
 .wq .w .top { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.8rem; color: var(--muted); }
 .wq .w .val { font-family: var(--display); font-size: 1.3rem; font-weight: 700; margin: 2px 0 5px; }
 .wq .w .val small { font-size: 0.85rem; color: var(--muted); font-weight: 600; }

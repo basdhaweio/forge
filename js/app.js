@@ -99,6 +99,17 @@ F.app = (() => {
       S.equipment.home = [...home]; S.settings.migHomeRackBag = true; F.store.save();
       if (added.length) setTimeout(() => F.ui.toast('Added your rack and heavy bag to Home equipment — Settings → Equipment to adjust', 4500), 1500);
     }
+    // One-time (2026-10-28): goals slowed right down — once a week each, any single thing counts. Old target edits go,
+    // ramp-ups count from today, and the re-scored past weeks are absorbed quietly instead of a burst of celebrations.
+    // The fast goal is 16 h now, so the old default 24 h timer target follows it (a chosen 36 h stays).
+    if (S.profile.onboarded && !S.settings.migGoalsOnce) {
+      S.settings.quotas = {};
+      if (S.settings.fast && S.settings.fast.targetH === 24) S.settings.fast.targetH = 16;
+      S.settings.goalsSince = F.ui.today();
+      S.settings.migGoalsOnce = true;
+      S.seen.init = false;
+      F.store.save();
+    }
     document.getElementById('log-btn').addEventListener('click', () => F.quickMenu());
     window.addEventListener('hashchange', render);
     render();

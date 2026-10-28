@@ -1,4 +1,4 @@
-/* Today: where you are, how the knees and back feel, the day's mission, daily and weekly quests, fuel at a glance.
+/* Today: where you are, how the knees and back feel, this week's goals, the daily quests, fuel at a glance.
    The same page opens for a past day (#/day/2026-09-29) to catch up on anything that wasn't logged at the time. */
 (() => {
   const { h, icon, toast, sheet, num, pill, progress } = F.ui;
@@ -116,7 +116,7 @@
       const r = read(), bad = problem(r);
       const n = bad ? 0 : F.ui.daysBetween(r.a, r.b || today) + 1;
       note.className = 'callout small' + (bad ? ' amber' : ' sky');
-      note.textContent = bad || `${n} day${n === 1 ? '' : 's'} in travel mode${r.b ? '' : ' so far, and it stays on until you tap Back home'}. Plans for those days use your travel kit, and the weekly quests scale to the days away.`;
+      note.textContent = bad || `${n} day${n === 1 ? '' : 's'} in travel mode${r.b ? '' : ' so far, and it stays on until you tap Back home'}. Exercise picks for those days use your travel kit, and the weekly goals scale to the days away.`;
     };
     for (const el of [startIn, endIn, still]) { el.addEventListener('input', paint); el.addEventListener('change', paint); }
     const done = (msg) => { sh.close(); toast(msg, 2600); F.game.afterChange(); F.app.render(); };
@@ -241,7 +241,7 @@
         ? h('button', { class: 'trip', onClick: () => F.tripSheet({ date }) }, '✈️ Was away')
         : h('button', { class: 'trip', onClick: () => setLoc(() => {
           F.store.startTrip(D());
-          toast('Travel mode on — plans use your travel kit and weekly quests scale down.', 4500, { label: 'Left earlier?', run: () => F.tripSheet({ trip: F.store.tripOn(F.ui.today()) }) });
+          toast('Travel mode on — exercise picks use your travel kit and weekly goals scale down.', 4500, { label: 'Left earlier?', run: () => F.tripSheet({ trip: F.store.tripOn(F.ui.today()) }) });
         }) }, '✈️ Travelling'));
     } else {
       // The kit is kept per day, so a past day can differ; on Today it also becomes the default for the rest of the trip.
@@ -253,7 +253,13 @@
         ? h('button', { onClick: () => F.tripSheet({ trip, date }) }, '✈️ Away ' + tripText(trip), icon('edit', 13))
         : h('button', { onClick: () => setLoc(() => { F.store.endTrip(D()); toast('Welcome home.'); }) }, '🏠 Back home'));
     }
-    const gymHint = `Gym day: ${past ? 'this day’s' : 'today’s'} strength session ${past ? 'is' : 'becomes'} a gym session (cables, pulldown, machines).${past ? '' : ' Tomorrow goes back to home.'}`;
+    // Gym day: exercise picks use the gym's kit, and the next gym session (A or B) is a tap away until one is logged —
+    // or the recovery session, if the knees or back flared.
+    const gymHint = () => {
+      const id = F.data.nextGym(date), r = id && F.data.resolveSession(id, F.data.ctx(date)), g = r && (r.flare ? r.flare.tpl : r.tpl);
+      return h('div', { class: 'small muted mt-s' }, `Gym day: exercise picks use the gym’s kit (cables, pulldown, machines).${past ? '' : ' Tomorrow goes back to home.'} `,
+        g ? h('button', { class: 'btn xs ghost', text: g.icon + ' ' + g.name, onClick: () => F.previewSession(g.id, { date: D() }) }) : null);
+    };
     if (past) {
       const rec = C.days[date];
       const next = F.ui.addDays(date, 1);
@@ -274,8 +280,8 @@
           h('a', { class: 'btn sm primary', href: '#/' }, 'Back to today'),
           dateIn),
         locbar,
-        travel ? h('div', { class: 'small muted mt-s', text: 'Travel day: plans use the travel kit picked here, and that week’s quests scale to the days away.' })
-          : todayLoc === 'gym' ? h('div', { class: 'small muted mt-s', text: gymHint }) : null,
+        travel ? h('div', { class: 'small muted mt-s', text: 'Travel day: exercise picks use the travel kit picked here, and that week’s goals scale to the days away.' })
+          : todayLoc === 'gym' ? gymHint() : null,
         status));
     } else {
       const hr = new Date().getHours();
@@ -287,9 +293,9 @@
           C.streak.freezes ? h('span', { title: 'Streak freezes banked — a missed day spends one instead of breaking the streak', text: '· ' + '❄️'.repeat(C.streak.freezes) }) : null),
         h('div', { class: 'mt-s' }, h('div', { class: 'xpbar', style: { height: '8px' } }, h('i', { style: { width: C.level.pct * 100 + '%' } }))),
         locbar,
-        travel ? h('div', { class: 'small muted mt-s' }, `Travel mode ${tripText(trip)}: sessions use your travel kit, the 4×4 goes machine-free if needed, and weekly quests scale to the days away. `,
+        travel ? h('div', { class: 'small muted mt-s' }, `Travel mode ${tripText(trip)}: exercise picks and sessions use your travel kit, and the weekly goals scale to the days away. `,
           h('button', { class: 'btn xs ghost', text: 'Change dates', onClick: () => F.tripSheet({ trip: F.store.tripOn(F.ui.today()) }) }))
-          : todayLoc === 'gym' ? h('div', { class: 'small muted mt-s', text: gymHint }) : null));
+          : todayLoc === 'gym' ? gymHint() : null));
     }
 
     // ----- check-in -----
@@ -305,7 +311,11 @@
         if (inj.lumbar) bits.push('Back ' + face(cur.back));
         bits.push('Energy ' + ['😴', '🙂', '⚡'][cur.energy]);
         ciCard.append(h('div', { class: 'row between' }, h('div', null, h('div', { class: 'eyebrow', text: 'Checked in' }), h('div', { text: bits.join('   ') })), h('button', { class: 'btn xs ghost', text: 'Edit', onClick: () => drawCheckin(true) })));
-        if (cur.knee >= 2 || cur.back >= 2) ciCard.append(h('div', { class: 'callout red small mt-s', text: `${cur.knee >= 2 ? 'Knees' : 'Back'} flared — ${past ? 'this day’s' : 'today’s'} plan swaps to a recovery session and filters out anything that loads it. Recovery days keep the streak and earn bonus XP.` }));
+        if (cur.knee >= 2 || cur.back >= 2) {
+          const knee = cur.knee >= 2, rec = F.data.session(knee ? 'flare_knee' : 'flare_back');
+          ciCard.append(h('div', { class: 'callout red small mt-s' }, `${knee ? 'Knees' : 'Back'} flared — anything that loads ${knee ? 'them' : 'it'} is filtered out ${past ? 'for this day' : 'today'}. A recovery session keeps the streak and earns bonus XP. `,
+            rec ? h('button', { class: 'btn xs', text: rec.icon + ' ' + rec.name, onClick: () => F.previewSession(rec.id, { date: D() }) }) : null));
+        }
         else if (cur.knee === 1 || cur.back === 1) ciCard.append(h('div', { class: 'callout amber small mt-s', text: past ? 'Grumpy that day — gentler exercise options are picked first.' : 'Grumpy today — gentler exercise options are picked first. Stop anything sharp.' }));
         if (cur.energy === 0) ciCard.append(h('div', { class: 'callout sky small mt-s', text: 'Low energy: optional sets are trimmed. Showing up counts — full credit.' }));
         return;
@@ -332,49 +342,65 @@
     drawCheckin(false);
     wrap.append(ciCard);
 
-    // ----- the day's mission -----
-    // On a past day nothing is started: a session is either filled in afterwards or just marked done.
-    const sched = F.data.scheduled(date);
-    const doneToday = F.store.sessionsOn(date).filter((x) => !x.auto);
-    const open = (id) => (!past || (S.active && S.active.src === id && S.active.plan.date === date) ? start(id) : F.previewSession(id, { date }));
-    const missions = h('div', { class: 'stack' });
-    const missionCard = (res, alt) => {
-      const tpl = res.flare && !alt ? res.flare.tpl : res.tpl;
-      const done = doneToday.find((x) => x.src === tpl.id || x.tpl === tpl.id);
-      const active = S.active && S.active.src === tpl.id && (past ? S.active.plan.date === date : !S.active.backfill);
-      const card = h('div', { class: 'card' + (done ? '' : ' clickable') });
-      card.append(h('div', { class: 'mission' + (done ? ' done' : '') },
-        h('div', { class: 'emo', text: done ? '✅' : tpl.icon }),
-        h('div', { class: 't' },
-          h('div', { class: 'eyebrow', text: res.flare && !alt ? res.flare.why + ' — recovery instead' : past ? 'Planned for this day' : 'Today’s mission' }),
-          h('b', { text: tpl.name }),
-          h('div', { class: 'small muted', text: done ? `Done · ${F.ui.dur(done.minutes)} · +${num(done.xp)} XP` : `${tpl.sub} · ~${tpl.est} min` })),
-        done ? null : h('button', { class: 'btn ' + (active ? 'primary' : past ? '' : 'fire'), onClick: (ev) => { ev.stopPropagation(); open(tpl.id); } },
-          icon(past && !active ? 'check' : 'play', 14), active ? 'Resume' : past ? 'Log it' : 'Start')));
-      for (const n of res.notes) card.append(h('div', { class: 'small muted mt-s', text: n }));
-      if (res.flare && !alt && !done) card.append(h('div', { class: 'small mt-s' }, h('button', { class: 'btn xs ghost', text: past ? `Log ${res.tpl.name} instead` : `Do ${res.tpl.name} anyway`, onClick: (ev) => { ev.stopPropagation(); open(res.tpl.id); } })));
-      if (!done) card.addEventListener('click', () => F.previewSession(tpl.id, { date: D() }));
-      return card;
+    // ----- this week: the goals, each once a week to start; any single thing of that kind counts -----
+    const ws = F.ui.weekStart(date), thisWeek = ws === F.ui.weekStart(today);
+    const wk = C.weeks[ws] || F.game.weekQuotas(ws, C.days, S);
+    const fuelHref = past ? '#/fuel/' + date : '#/fuel';
+    const budget = F.game.treatBudget();
+    // The whole session behind a goal or quest (the PT routine, the day's holds or stretch), on top of the picker.
+    const whole = (sid) => { const tpl = F.data.templateFor(sid, D()); return { icon: tpl.icon, label: tpl.name, sub: past ? 'Fill in the whole session' : 'The whole session, in the player', run: () => start(sid) }; };
+    const pickOne = (title, cats, sid) => F.exercisePicker({ date: D(), title, cats, whole: sid ? whole(sid) : null, onPick: (e) => F.quickSets(e.id, { date: D() }) });
+    // Tapping a goal goes straight to logging one thing of that kind.
+    const goalAct = (q) => {
+      const def = P.quotas.find((x) => x.id === q.id) || {};
+      if (def.cats && def.cats.length) pickOne(q.label, def.cats, def.whole);
+      else if (def.log) F.quickLog(def.log, { date: D() });
+      else if (def.session) {
+        // a flared knee or back swaps it for the recovery session
+        const r = F.data.resolveSession(def.session, F.data.ctx(D()));
+        if (r && r.flare) toast(`${r.flare.why} — ${r.flare.tpl.name} instead`, 2600);
+        F.previewSession(r ? (r.flare ? r.flare.id : r.id) : def.session, { date: D() });
+      }
+      else if (q.kind === 'fast') { if (S.activeFast) location.hash = '#/fuel'; else F.fastSheet(); }
+      else location.hash = fuelHref;
     };
-    if (sched.length) sched.forEach((r) => missions.append(missionCard(r)));
-    else missions.append(h('div', { class: 'card' }, h('div', { class: 'mission' }, h('div', { class: 'emo', text: '🌿' }), h('div', { class: 't' }, h('div', { class: 'eyebrow', text: 'Rest day' }), h('b', { text: 'Recover and stay loose' }), h('div', { class: 'small muted', text: 'PT, holds, mobility and a walk still count toward the streak.' })))));
-    // Or skip the session: a few sets of anything, logged in one go.
-    const picks = F.quickPicks(date).slice(0, 8);
-    missions.append(h('div', null,
-      h('div', { class: 'small muted', text: past ? 'Or log a few sets of anything you did:' : 'Or just do a few sets — tap one, log it, done:' }),
-      h('div', { class: 'chips mt-s' }, picks.map((e) => h('button', { class: 'chip', text: e.name, onClick: () => F.quickSets(e.id, { date: D() }) })),
-        h('button', { class: 'chip', onClick: () => F.exercisePicker({ date: D(), title: 'Quick sets', onPick: (e) => F.quickSets(e.id, { date: D() }) }) }, 'More…'))));
-    // Everything else done that day; quick sets of the same exercise share a row ("3×10, 3×12").
-    const doneRow = (emo, title, sub) => missions.append(h('div', { class: 'card tight row nowrap' }, h('span', { text: emo || '✅' }), h('div', { class: 'grow' }, h('b', { text: title }), h('div', { class: 'small muted', text: sub })), pill('done', 'green')));
-    const quickDone = {};
-    for (const x of doneToday) {
-      if (sched.some((r) => r.id === x.tpl || r.id === x.src || (r.flare && r.flare.id === x.tpl))) continue;
-      if (x.act === 'sets') { (quickDone[x.title] || (quickDone[x.title] = [])).push(x); continue; }
-      doneRow(x.icon, x.title, `${F.ui.dur(x.minutes)} · +${num(x.xp)} XP`);
+    if (wk) {
+      const grid = h('div', { class: 'wq' });
+      for (const q of wk.list) {
+        if (!q.target) continue;
+        let val, pct;
+        if (q.kind === 'sugar') { val = h('div', { class: 'val', text: num(q.extra ? q.extra.used : 0, 1) }, h('small', { text: ` / ${num(budget, 1)} treats` })); pct = q.extra && budget ? Math.min(1, q.extra.used / budget) : 0; }
+        else { val = h('div', { class: 'val', text: num(q.done) }, h('small', { text: ' / ' + q.target })); pct = q.done / q.target; }
+        grid.append(h('button', { class: 'w' + (q.met ? ' met' : ''), onClick: () => goalAct(q), 'aria-label': `${q.label}: ${q.met ? 'done' : 'log one'}` },
+          h('div', { class: 'top' }, h('span', { text: q.icon + ' ' + q.label }), h('span', { text: q.met ? '✓' : '＋' })), val,
+          progress(pct, q.kind === 'sugar' ? (pct > 1 ? 'red' : 'green') : q.met ? 'green' : '')));
+      }
+      const offer = !past && F.game.rampOffer();
+      const met = wk.list.filter((q) => q.target && q.met).length, tot = wk.list.filter((q) => q.target).length;
+      wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: thisWeek ? 'This week' : 'Week of ' + F.ui.fmtDate(ws, { month: 'short', day: 'numeric' }) }), h('span', { class: 'small muted', text: `${met} / ${tot} · all of them +${P.perfectXP} XP` })),
+        offer ? h('div', { class: 'callout green mb row between' }, h('span', { text: `${offer.icon} ${offer.label}: three weeks running. Make it ${offer.target + 1}× a week from Monday?` }),
+          h('div', { class: 'row', style: { gap: '6px' } },
+            h('button', { class: 'btn xs primary', text: `${offer.target + 1}× a week`, onClick: () => { F.game.raiseGoal(offer.id); toast(`${offer.label}: ${offer.target + 1}× a week from Monday`, 2600); F.app.render(); } }),
+            h('button', { class: 'btn xs ghost', text: 'Not yet', onClick: () => { F.game.snoozeRamp(offer.id); F.app.render(); } }))) : null,
+        grid,
+        h('div', { class: 'small muted mt-s', text: 'Tap a goal to log one thing of that kind — a single exercise counts.' }),
+        wk.travelDays ? h('div', { class: 'small muted mt-s', text: `${wk.travelDays} travel day${wk.travelDays > 1 ? 's' : ''} ${thisWeek ? 'this' : 'that'} week — targets scaled.` }) : null));
     }
-    const setsText = (x) => { const z = ((x.entries[0] || {}).sets || []); return z.length + '×' + (z[0] ? (z[0].r ? z[0].r : (z[0].s || 0) + ' s') : ''); };
-    for (const [title, list] of Object.entries(quickDone)) doneRow(list[0].icon, title, `${list.map(setsText).join(', ')} · +${num(list.reduce((a, x) => a + (x.xp || 0), 0))} XP`);
-    wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: 'Mission' }), h('button', { class: 'btn xs ghost', onClick: () => pickSession(D()) }, icon('swap', 14), past ? 'Did something else' : 'Do something else')), missions));
+
+    // ----- what was logged that day; quick sets of one exercise share a row ("3×10, 3×12") -----
+    const doneToday = F.store.sessionsOn(date).filter((x) => !x.auto);
+    if (doneToday.length) {
+      const logged = h('div', { class: 'stack', style: { gap: '8px' } });
+      const doneRow = (emo, title, sub) => logged.append(h('div', { class: 'card tight row nowrap' }, h('span', { text: emo || '✅' }), h('div', { class: 'grow' }, h('b', { text: title }), h('div', { class: 'small muted', text: sub })), pill('done', 'green')));
+      const quickDone = {};
+      for (const x of doneToday) {
+        if (x.act === 'sets') { (quickDone[x.title] || (quickDone[x.title] = [])).push(x); continue; }
+        doneRow(x.icon, x.title, `${F.ui.dur(x.minutes)} · +${num(x.xp)} XP`);
+      }
+      const setsText = (x) => { const z = ((x.entries[0] || {}).sets || []); return z.length + '×' + (z[0] ? (z[0].r ? z[0].r : (z[0].s || 0) + ' s') : ''); };
+      for (const [title, list] of Object.entries(quickDone)) doneRow(list[0].icon, title, `${list.map(setsText).join(', ')} · +${num(list.reduce((a, x) => a + (x.xp || 0), 0))} XP`);
+      wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: past ? 'Logged that day' : 'Done today' })), logged));
+    }
 
     // ----- daily quests -----
     // On a fast day the protein and food-log quests are off.
@@ -399,7 +425,6 @@
         icon('plus', 18));
     const holdsTpl = F.data.templateFor('holds', date), c = F.data.ctx(date);
     const holdNames = holdsTpl.blocks[0].items.map((it) => { const r = F.data.resolveSlot(it.slot, c); return r.ex ? r.ex.name : null; }).filter(Boolean).join(' + ');
-    const fuelHref = past ? '#/fuel/' + date : '#/fuel';
     const subs = {
       checkin: ci ? 'done' : 'knees · back · energy',
       pt: (S.settings.ptRoutine || P.ptDefault).map((x) => (F.data.ex(x.ex) || {}).name).filter(Boolean).slice(0, 3).join(', ') + '…',
@@ -415,6 +440,7 @@
       const cov = covered.has(t.id);
       const openTask = () => {
         if (cov) F.formalSheet(D());
+        else if (t.kind === 'session' && t.cats) pickOne(t.label, t.cats, t.session);
         else if (t.kind === 'session') start(t.session);
         else if (t.kind === 'walk') F.quickLog('walk', { date: D() });
         else if (t.kind === 'protein' || t.kind === 'food') location.hash = fuelHref;
@@ -429,7 +455,7 @@
       } }, icon('check', 16));
       ql.append(h('div', { class: 'qrow' + (done ? ' done' : '') + (cov ? ' covered' : ''), onClick: openTask },
         h('span', { class: 'emo', text: t.icon }),
-        h('div', { class: 't' }, h('b', { text: t.label === 'Walk' ? `Walk ${walkT} min` : t.label }), h('small', { text: cov ? 'Covered by formal PT 🩺' : subs[t.id] || t.sub || '' })),
+        h('div', { class: 't' }, h('b', { text: t.label === 'Walk' ? `Walk ${walkT} min` : t.label }), h('small', { text: cov ? 'Covered by formal PT 🩺' : done ? 'done' : t.sub || subs[t.id] || '' })),
         h('span', { class: 'pill xp', text: '+' + t.xp }), tick));
     }
     const nDone = tasks.filter((t) => tdone.has(t.id)).length;
@@ -437,10 +463,8 @@
       fastToday ? h('div', { class: 'small muted mt-s', text: `⏳ Fast day: Hit protein and Log food are off ${past ? 'for this day' : 'today'}. Water still counts.` }) : null));
 
     // ----- fuel snapshot -----
-    const ws = F.ui.weekStart(date), thisWeek = ws === F.ui.weekStart(today);
-    const wk = C.weeks[ws] || F.game.weekQuotas(ws, C.days, S);
     const treatQ = wk && wk.list.find((q) => q.id === 'sugar');
-    const used = treatQ && treatQ.extra ? treatQ.extra.used : 0, budget = F.game.treatBudget();
+    const used = treatQ && treatQ.extra ? treatQ.extra.used : 0;
     const fuel = h('div', { class: 'card' });
     const fs = h('div', { class: 'fuelsnap' },
       F.ui.ring(protein / pT, { size: 92, stroke: 9, label: num(protein), sub: fastToday ? 'fast day' : `/ ${pT} g`, color: fastToday ? 'var(--purple)' : undefined }),
@@ -456,21 +480,6 @@
     if (fastMini) fuel.append(h('div', { class: 'divider' }), fastMini);
     wrap.append(fuel);
 
-    // ----- weekly quests -----
-    if (wk) {
-      const grid = h('div', { class: 'wq' });
-      for (const q of wk.list) {
-        if (!q.target) continue;
-        let val, pct;
-        if (q.kind === 'sugar') { val = h('div', { class: 'val', text: num(q.extra ? q.extra.used : 0, 1) }, h('small', { text: ` / ${num(budget, 1)} treats` })); pct = q.extra && budget ? Math.min(1, q.extra.used / budget) : 0; }
-        else { val = h('div', { class: 'val', text: num(q.done) }, h('small', { text: ' / ' + q.target })); pct = q.done / q.target; }
-        grid.append(h('div', { class: 'w' + (q.met ? ' met' : '') }, h('div', { class: 'top' }, h('span', { text: q.icon + ' ' + q.label }), q.met ? h('span', { text: '✓' }) : null), val, progress(pct, q.kind === 'sugar' ? (pct > 1 ? 'red' : 'green') : q.met ? 'green' : '')));
-      }
-      const met = wk.list.filter((q) => q.target && q.met).length, tot = wk.list.filter((q) => q.target).length;
-      wrap.append(h('div', null, h('div', { class: 'section-title' }, h('h2', { text: thisWeek ? 'Weekly quests' : 'Quests · week of ' + F.ui.fmtDate(ws, { month: 'short', day: 'numeric' }) }), h('span', { class: 'small muted', text: `${met} / ${tot} · perfect week +${P.perfectXP} XP` })), grid,
-        wk.travelDays ? h('div', { class: 'small muted mt-s', text: `${wk.travelDays} travel day${wk.travelDays > 1 ? 's' : ''} ${thisWeek ? 'this' : 'that'} week — targets scaled.` }) : null,
-        wk.fastDays ? h('div', { class: 'small muted mt-s', text: `${wk.fastDays} fast day${wk.fastDays > 1 ? 's' : ''} ${thisWeek ? 'this' : 'that'} week — the protein target is lower to match.` }) : null));
-    }
     if (past) return wrap;
 
     // ----- nudges -----
@@ -487,12 +496,4 @@
     return wrap;
   };
 
-  function pickSession(date) {
-    const groups = {};
-    for (const s of F.data.sessions()) { if (s.gate === 'run' && !F.store.load().settings.runUnlocked) continue; (groups[s.group] || (groups[s.group] = [])).push(s); }
-    const sh = sheet(h('div', null, h('h2', { text: 'Pick a session' }), h('p', { class: 'small muted', text: 'Weekly quests count whatever you actually do — the schedule is only a suggestion.' }),
-      Object.entries(groups).map(([g, list]) => h('div', { class: 'mt' }, h('div', { class: 'eyebrow', text: g }), h('div', { class: 'list' }, list.map((s) => h('div', { class: 'item', onClick: () => { sh.close(); F.previewSession(s.id, { date }); } },
-        h('span', { class: 'emo', text: s.icon }), h('div', { class: 't' }, h('b', { text: s.name }), h('small', { text: `${s.sub} · ~${s.est} min` })), icon('chevron', 16))))))));
-  }
-  F.pickSession = pickSession;
 })();

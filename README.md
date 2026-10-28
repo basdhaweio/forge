@@ -1,6 +1,6 @@
 # Forge
 
-A gamified training, rehab and nutrition tracker. It plans each day around injuries and travel, logs everything that counts as exercise (PT included), and turns consistency into XP, levels, streaks, quests and records.
+A gamified training, rehab and nutrition tracker. It starts small (a few once-a-week goals, where a single exercise counts), works around injuries and travel, logs everything that counts as exercise (PT included), and turns consistency into XP, levels, streaks, quests and records.
 
 **Live:** https://basdhaweio.github.io/forge/
 
@@ -10,16 +10,19 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
 
 ## What it does
 
-- **Today**: a morning check-in (knees, back, energy), today's mission from the weekly schedule, 8 daily quests (check-in, PT, isometric holds, roll & stretch, walk, protein, water, food log), a fuel snapshot and the weekly quests.
-- **Catch up on a day you forgot**: the strip above Today shows the last seven days, with what each earned and which were missed. Tap one to open that day, then tick its PT, holds and stretching, check in, log food, and mark a session done or fill in its sets and weights. The + button can also log to yesterday or any earlier day.
+- **Today**: a morning check-in (knees, back, energy), this week's goals, what's been done today, 4 daily quests (check-in, PT, stretch, water) and a fuel snapshot.
+  - **Weekly goals** start at once a week each: PT, strength, holds, a walk, yoga or stretch, a protein day, a 16 h fast and the treat budget. Krav, the 4×4, Zone 2 and Murph prep are off until you turn them on (Settings → Program → Weekly goals).
+  - **Any single thing counts.** Tap a goal (or the PT or Stretch quest) and pick an exercise that fits the day, with recent ones first; three sets of clamshells is a PT day. The whole PT routine, holds or stretch session sits at the top of the list for days you want it.
+  - **Nothing is scheduled.** There's no plan for the day to fall behind on. A goal hit three weeks running offers to go up by one from the next Monday, at most one offer a week, and earlier weeks keep the targets they had.
+- **Catch up on a day you forgot**: the strip above Today shows the last seven days, with what each earned and which were missed. Tap one to open that day, then tick its PT and stretching, check in, log food or a few sets, and mark a session done or fill in its sets and weights. The + button can also log to yesterday or any earlier day.
 - **Formal PT days**: one tap on 🩺 "Formal PT today?" logs a clinic or PT Pilates session as PT and covers the home PT routine for the day. Settings → Program can let it cover holds and stretching too.
 - **Adapts**:
-  - **Home by default, gym when you go**: every day is planned for the home kit (rack, TRX, heavy bag, bands, PT gear). Tap **Gym day** on Today when you get to the gym and that day's strength session becomes Gym day A or B (pulldown, cables, machines). The next day goes back to home.
-  - **Travel mode** swaps in the hotel-room or hotel-gym kit, makes the 4×4 machine-free and scales the weekly quests to the days away. A trip can be added, moved or removed afterwards from any past day (“Was away”), and each day away keeps its own kit.
-  - A **flare-up** check-in swaps the day to a recovery session. Recovery days keep the streak and earn bonus XP.
+  - **Home by default, gym when you go**: every day is planned for the home kit (rack, TRX, heavy bag, bands, PT gear). Tap **Gym day** on Today when you get to the gym: exercise picks use the gym's kit (pulldown, cables, machines), and Gym day A or B, whichever is next, is one tap away. The next day goes back to home.
+  - **Travel mode** swaps in the hotel-room or hotel-gym kit, makes the 4×4 machine-free and scales the weekly goals to the days away. A trip can be added, moved or removed afterwards from any past day (“Was away”), and each day away keeps its own kit.
+  - A **flare-up** check-in filters out anything that loads the joint and offers a recovery session (Knee-calm or Back-care day). Recovery days keep the streak and earn bonus XP.
   - **Low energy** trims optional sets.
 - **Train**: 29 guided sessions (strength A/B/C, gym days A/B, TRX, Krav, Norwegian 4×4, Zone 2, yoga flows, mobility, Murph builder, Cindy, Murph, recovery days, travel reset) and a quick log for anything else (Krav class, walks, rides, PT visits, ski days…). There's also a history and a 249-exercise library, filtered to **At home**, **Gym only** or **All**, with knee, back and shoulder flags, cues and notes on every exercise.
-- **Quick sets**: tap any exercise (under today's mission, in the + menu, in the Library, or "Add an exercise" inside a session), adjust 3 × 10, log it. No session and no timer; it still earns XP, keeps the streak and can set a record.
+- **Quick sets**: tap any exercise (from a goal or quest on Today, the + menu, the Library, or "Add an exercise" inside a session), adjust 3 × 10, log it. No session and no timer; it still earns XP, keeps the streak and can set a record.
 - **Player**: the session clock waits for the first thing you log, so opening a session just to read it costs nothing (and it closes again if you leave without logging). It logs sets with targets taken from your history (double progression; holds go up 5 s each time). It also has:
   - Swap for any slot, and the swap is remembered
   - A rest timer
@@ -28,16 +31,16 @@ Same stack as Canto: a static PWA, vanilla JS with no build step, installable on
   - A guided yoga/mobility flow
   - A round counter for Murph/Cindy
 - **Fuel**:
-  - A protein target (0.8 g/lb by default)
+  - A protein target (0.6 g/lb by default while training is light; set your own in Settings when lifting picks up)
   - **Water** by the glass or bottle against a daily target (half your bodyweight in ounces to start), with a one-tap button on Today
   - **Treats counted, not weighed**: small ½, regular 1, big 2, against a weekly budget (5 by default), so a baking day evens out
   - **Meals**: build a meal from ingredients once (it totals the protein and calories), then log it with one tap; a chocolate protein smoothie is included
   - Protein by portion ("palm of chicken, meat or fish" ≈ 30 g), so no weighing
   - Optional calories
-  - A **fasting timer** that walks through what the body is doing hour by hour. It can be started from when you last ate (“last night 8 PM”), have its start fixed, be ended at the time you actually ate, or take a fast you never timed
+  - A **fasting timer** (16, 24 or 36 h target) that walks through what the body is doing hour by hour. It can be started from when you last ate (“last night 8 PM”), have its start fixed, be ended at the time you actually ate, or take a fast you never timed
 - **Body**: monthly tape measurements with trends, the V-taper ratio and waist-to-height ratio.
 - **Sync** (Settings → Sync): keeps your phone and laptop in step through a secret gist on your GitHub account, optionally encrypted with a passphrase.
-- **Plan for your PT** (Settings → Program): a printable page with the week, every exercise the plan uses at home, their knee and back flags, and the rules the app follows.
+- **Plan for your PT** (Settings → Program): a printable page with the weekly goals, every exercise the plan uses at home, their knee and back flags, and the rules the app follows.
 - **Hero**:
   - Level and title
   - 7 stats (Strength, Engine, Agility, Mobility, Grit, Armor, Fuel)

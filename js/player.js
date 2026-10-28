@@ -93,7 +93,7 @@
     const notes = h('textarea', { placeholder: 'Notes (optional)', style: { minHeight: '50px' } });
     const sh = sheet(h('div', { class: 'stack' },
       h('div', null, h('div', { class: 'eyebrow', text: date === today ? 'Today' : F.ui.fmtDate(date, LONG) + ' · ' + F.ui.relDay(date) }), h('h2', { text: `${plan.icon} ${plan.title} — done` })),
-      h('p', { class: 'small muted', text: `Logs it with the minutes only. It counts for XP, your streak and the weekly quests. To record sets, weights or times, use “${date === today ? 'Start' : 'Fill in what I did'}” instead.` }),
+      h('p', { class: 'small muted', text: `Logs it with the minutes only. It counts for XP, your streak and the weekly goals. To record sets, weights or times, use “${date === today ? 'Start' : 'Fill in what I did'}” instead.` }),
       h('label', { class: 'field' }, h('span', { text: 'Minutes' }), minIn), notes,
       h('button', { class: 'btn fire big block', onClick: () => {
         const S = F.store.load();

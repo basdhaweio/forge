@@ -24,7 +24,7 @@ F.store = (() => {
       theme: 'auto', location: 'home', travelLoc: 'room', phase: 1, sound: true, vibrate: true,
       walkMin: 30, schedule: null, quotas: {}, ptRoutine: null, slotPrefs: {}, runUnlocked: false,
       nutrition: { protein: null, treatsWeek: 5, kcal: null, trackKcal: true, water: null },   // water: fl oz a day, null = auto
-      fast: { day: 0, targetH: 24 },
+      fast: { day: 0, targetH: 16 },
       goals: { thresholdLb: null, photoWaist: 2, photoArms: 1 },
       quests: {},
       formalPtCovers: { holds: false, mobility: false },   // what a formal PT day also counts for
